@@ -16,7 +16,10 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
-  Loader2
+  Loader2,
+  Archive,
+  ArchiveRestore,
+  Inbox
 } from "lucide-react";
 import { io } from "socket.io-client";
 import AgentsPage from "./components/AgentsPage";
@@ -195,6 +198,8 @@ export default function AdminDashboard() {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
   const [agentMessage, setAgentMessage] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const socketRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -328,6 +333,29 @@ export default function AdminDashboard() {
     };
   }, [authToken]);
 
+  // Muat arsip dari REST API saat tab arsip dibuka
+  useEffect(() => {
+    if (!authToken || !showArchived) return;
+    fetch("http://localhost:3001/api/claims?archived=true", {
+      headers: { "Authorization": `Bearer ${authToken}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        setClaims(data.map((c: any) => ({
+          id: c.id,
+          orderId: c.orderId,
+          item: c.item || `Order ${c.orderId}`,
+          price: parseFloat(c.price) || 0,
+          reason: c.analysis?.reason || "Diarsipkan",
+          analysis: c.analysis || { damageType: "-", confidence: 0 },
+          status: "completed" as const,
+          messages: []
+        })));
+      })
+      .catch(console.error);
+  }, [showArchived, authToken]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -358,6 +386,25 @@ export default function AdminDashboard() {
       role: "agent"
     });
     setAgentMessage("");
+  };
+
+  const handleArchive = async (claimId: string, archive: boolean) => {
+    if (!authToken) return;
+    setIsArchiving(true);
+    try {
+      await fetch(`http://localhost:3001/api/claims/${claimId}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
+        body: JSON.stringify({ archived: archive })
+      });
+      // Hapus dari list yang sedang ditampilkan
+      setClaims(prev => prev.filter(c => c.id !== claimId));
+      setSelectedClaimId(null);
+    } catch (err) {
+      console.error("Archive error:", err);
+    } finally {
+      setIsArchiving(false);
+    }
   };
 
   // Loading state
@@ -436,17 +483,28 @@ export default function AdminDashboard() {
         {activeMenu === "dashboard" && (
           <>
           <section className="w-80 border-r border-white/5 flex flex-col">
-          <div className="p-6 border-b border-white/5 flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-white/40">Antrean Klaim</h2>
-            {claims.length > 0 && (
-              <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">{claims.length}</span>
-            )}
+          <div className="p-4 border-b border-white/5 flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-white/40">
+              {showArchived ? "Arsip Klaim" : "Antrean Klaim"}
+            </h2>
+            <div className="flex items-center gap-2">
+              {!showArchived && claims.length > 0 && (
+                <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">{claims.length}</span>
+              )}
+              <button
+                onClick={() => { setShowArchived(v => !v); setClaims([]); setSelectedClaimId(null); }}
+                title={showArchived ? "Lihat Aktif" : "Lihat Arsip"}
+                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
+              >
+                {showArchived ? <Inbox className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {claims.length === 0 && (
               <div className="flex flex-col items-center justify-center h-40 text-center opacity-30">
-                <Clock className="w-8 h-8 mb-2" />
-                <p className="text-xs">Tidak ada klaim aktif</p>
+                {showArchived ? <Archive className="w-8 h-8 mb-2" /> : <Clock className="w-8 h-8 mb-2" />}
+                <p className="text-xs">{showArchived ? "Tidak ada klaim diarsipkan" : "Tidak ada klaim aktif"}</p>
               </div>
             )}
             {claims.map(claim => (
@@ -485,14 +543,35 @@ export default function AdminDashboard() {
                   <h2 className="text-xl font-bold">{selectedClaim.item}</h2>
                   <p className="text-xs text-white/40">Order ID: {selectedClaim.orderId} • Klaim Terdeteksi Gemini</p>
                 </div>
-                {selectedClaim.status === "pending" && (
-                  <button 
-                    onClick={() => handleClaimSession(selectedClaim.id)}
-                    className="px-6 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-cyan-500/20"
+                <div className="flex items-center gap-3">
+                  {selectedClaim.status === "pending" && (
+                    <button 
+                      onClick={() => handleClaimSession(selectedClaim.id)}
+                      className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-cyan-500/20"
+                    >
+                      Ambil Alih
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleArchive(selectedClaim.id, !showArchived)}
+                    disabled={isArchiving}
+                    title={showArchived ? "Pulihkan dari arsip" : "Arsipkan klaim ini"}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl transition-all disabled:opacity-50 ${
+                      showArchived
+                        ? "bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30"
+                        : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10"
+                    }`}
                   >
-                    Ambil Alih Percakapan
+                    {isArchiving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : showArchived ? (
+                      <ArchiveRestore className="w-4 h-4" />
+                    ) : (
+                      <Archive className="w-4 h-4" />
+                    )}
+                    {showArchived ? "Pulihkan" : "Arsipkan"}
                   </button>
-                )}
+                </div>
               </div>
 
               <div className="flex-1 flex overflow-hidden">

@@ -46,7 +46,21 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
 
-  // Data pesanan akan diambil secara dinamis dari API via Server.js
+  // Session ID unik per pelanggan — tersimpan di localStorage
+  const [sessionId] = useState<string>(() => {
+    if (typeof window === "undefined") return "ssr-session";
+    let id = localStorage.getItem("chat_session_id");
+    if (!id) {
+      id = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem("chat_session_id", id);
+    }
+    return id;
+  });
+
+  const handleNewChat = () => {
+    localStorage.removeItem("chat_session_id");
+    window.location.reload();
+  };
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -65,8 +79,8 @@ export default function Home() {
     });
     socketRef.current = socket;
 
-    // Bergabung ke room awal agar bisa menerima pesan
-    socket.emit("join_room", { roomId: "initial-chat" });
+    // Bergabung ke room unik milik pelanggan ini
+    socket.emit("join_room", { roomId: sessionId });
 
     socket.on("new_message", (msg: any) => {
       setMessages((prev) => {
@@ -77,15 +91,23 @@ export default function Home() {
       
       if (msg.role === "ai") {
         setIsTyping(false);
-        if (msg.content.includes("[INTENT:REQUEST_PHOTO]")) {
-          setStep("upload");
-          const orderMatch = msg.content.match(/ORD-[A-Z0-9]+/i);
+        // Gunakan field 'intent' yang dikirim server (tag sudah dihapus dari content)
+        if (msg.intent === "request_photo") {
+          // Coba ambil orderId dari metadata message atau dari history pesan sebelumnya
+          const orderMatch = msg.orderId || 
+            (messages.concat(msg).reverse().map((m: any) => m.content?.match?.(/ORD-[A-Z0-9]+/i)?.[0]).find(Boolean));
+          
           if (orderMatch) {
-            const orderId = orderMatch[0];
-            setCurrentOrder({ id: orderId }); 
+            // orderId valid — tampilkan form upload
+            setCurrentOrder((prev: any) => ({ ...prev, id: orderMatch }));
+            setStep("upload");
             if (socketRef.current) {
-              socketRef.current.emit("join_room", { roomId: orderId });
+              socketRef.current.emit("join_room", { roomId: orderMatch });
             }
+          } else {
+            // orderId tidak ditemukan — jangan tampilkan form upload, minta customer konfirmasi
+            console.warn("[WARN] intent=request_photo tapi orderId tidak ditemukan");
+            // Step tetap di "chat", customer harus masukkan nomor order dulu
           }
         }
       }
@@ -96,7 +118,22 @@ export default function Home() {
     });
 
     socket.on("load_history", (history: Message[]) => {
-      if (history.length > 0) setMessages(history);
+      if (history.length > 0) {
+        setMessages(history);
+        // Restore currentOrder dari history jika ada order ID yang tersebut
+        const allContent = history.map(m => m.content || "").join(" ");
+        const orderMatch = allContent.match(/ORD-[A-Z0-9]+/gi);
+        if (orderMatch && orderMatch.length > 0) {
+          const lastOrderId = orderMatch[orderMatch.length - 1];
+          setCurrentOrder((prev: any) => prev?.id ? prev : { id: lastOrderId });
+        }
+      }
+    });
+
+    // Saat admin mengarsipkan chat ini — reset sesi customer
+    socket.on("chat_archived", () => {
+      localStorage.removeItem("chat_session_id");
+      window.location.reload();
     });
 
     return () => {
@@ -120,7 +157,7 @@ export default function Home() {
     if (!inputValue.trim() || !socketRef.current) return;
 
     const userText = inputValue.trim();
-    const roomId = currentOrder ? currentOrder.id : "initial-chat";
+    const roomId = currentOrder ? currentOrder.id : sessionId;
 
     socketRef.current.emit("send_message", {
       roomId,
@@ -151,10 +188,12 @@ export default function Home() {
     addMessage("user", `Mengunggah foto: ${file.name}`, "upload", { fileName: file.name }, imageData);
     
     if (chatStatus !== "ai") {
-      console.log("Human mode active. Skipping AI analysis.");
+      console.log("Human mode active. Sending photo to agent.");
+      // Gunakan sessionId sebagai roomId utama — room tempat agent terhubung
+      const activeRoomId = sessionId;
       if (socketRef.current) {
         socketRef.current.emit("agent_message", {
-          roomId: currentOrder?.id || "initial-chat",
+          roomId: activeRoomId,
           content: `[PHOTO UPLOADED]: ${file.name}`,
           imageUrl: imageData,
           role: "user"
@@ -174,8 +213,18 @@ export default function Home() {
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("orderId", currentOrder?.id || "");
+      const orderId = currentOrder?.id || "";
+      formData.append("orderId", orderId);
       formData.append("reason", lastUserMsg);
+
+      // Guard: orderId harus ada sebelum analisis
+      if (!orderId) {
+        setMessages((prev) => prev.filter((m) => m.type !== "analysis"));
+        addMessage("ai", "Mohon sebutkan nomor order Anda terlebih dahulu sebelum mengunggah foto bukti kerusakan. Contoh: ORD-XXXXXXXX");
+        setStep("chat");
+        setIsTyping(false);
+        return;
+      }
 
       const res = await fetch("http://localhost:3001/api/analyze", {
         method: "POST",
@@ -183,6 +232,15 @@ export default function Home() {
       });
 
       const analysis = await res.json();
+
+      // Handle error dari server
+      if (!res.ok) {
+        setMessages((prev) => prev.filter((m) => m.type !== "analysis"));
+        addMessage("ai", `Gagal menganalisis: ${analysis.error || "Terjadi kesalahan. Silakan coba lagi."}`);
+        setStep("upload");
+        setIsTyping(false);
+        return;
+      }
 
       // Hapus pesan "Sedang menganalisis..." sebelum menampilkan hasil
       setMessages((prev) => prev.filter((m) => m.type !== "analysis"));
@@ -285,6 +343,14 @@ export default function Home() {
           )}
           <div className="flex items-center gap-1"><ShieldCheck className="w-4 h-4 text-emerald-500" /> Secure</div>
           <div className="flex items-center gap-1"><Package className="w-4 h-4 text-blue-500" /> Tracked</div>
+          <button
+            onClick={handleNewChat}
+            title="Mulai sesi chat baru"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all text-white/50 hover:text-white"
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
+            Chat Baru
+          </button>
         </div>
       </header>
 

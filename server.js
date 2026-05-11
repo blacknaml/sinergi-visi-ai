@@ -8,6 +8,9 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
+console.log(`[STARTUP] Gemini API Key: ${apiKey ? apiKey.slice(0,12) + '... (' + apiKey.length + ' chars)' : 'TIDAK ADA!'}`);
+
 const JWT_SECRET = process.env.JWT_SECRET || "sinergivisi-secret-key-change-in-production";
 
 const app = express();
@@ -20,7 +23,8 @@ const io = new Server(httpServer, {
     origin: "http://localhost:3000",
     methods: ["GET", "POST"]
   },
-  transports: ["websocket", "polling"]
+  transports: ["websocket", "polling"],
+  maxHttpBufferSize: 10 * 1024 * 1024  // 10MB — untuk base64 gambar
 });
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
@@ -230,6 +234,51 @@ app.delete("/api/agents/:id", authenticateAgent, async (req, res) => {
   }
 });
 
+// --- Claims Archive Endpoints ---
+// Migrasi kolom archived jika belum ada
+pool.query("ALTER TABLE claims ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false")
+  .catch(e => console.error("Migration archived column:", e.message));
+
+app.get("/api/claims", authenticateAgent, async (req, res) => {
+  const archived = req.query.archived === "true";
+  try {
+    const result = await pool.query(
+      "SELECT * FROM claims WHERE archived = $1 ORDER BY created_at DESC",
+      [archived]
+    );
+    res.json(result.rows.map(c => ({
+      id: c.room_id,
+      orderId: c.order_id,
+      item: c.item_name,
+      price: c.price,
+      status: c.status,
+      mode: c.mode,
+      archived: c.archived,
+      analysis: c.analysis_result,
+      created_at: c.created_at
+    })));
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil data klaim." });
+  }
+});
+
+app.patch("/api/claims/:roomId/archive", authenticateAgent, async (req, res) => {
+  const { roomId } = req.params;
+  const { archived } = req.body;
+  try {
+    await pool.query("UPDATE claims SET archived = $1 WHERE room_id = $2", [archived, roomId]);
+    await logEvent(req.agent.id, req.agent.email, "CLAIM_ARCHIVED",
+      `Klaim ${roomId} ${archived ? "diarsipkan" : "dipulihkan"}`, req.ip);
+    // Beritahu customer di room ini bahwa sesi sudah diarsipkan
+    if (archived) {
+      io.to(roomId).emit("chat_archived");
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengarsipkan klaim." });
+  }
+});
+
 // --- Security Logs Endpoints ---
 app.get("/api/security/logs", authenticateAgent, async (req, res) => {
   try {
@@ -301,8 +350,8 @@ ALUR KOMPLAIN WAJIB:
 
 // --- AI Logic ---
 async function getAiResponse(userMessage, history) {
-  const models = ["gemini-2.0-flash", "gemini-2.5-flash"];
-  let lastError = null;
+  // Model yang tersedia untuk key ini (dari /v1beta/models)
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
 
   // Coba cari Nomor Order di pesan terakhir (Format ORD-...)
   const orderMatch = userMessage.match(/ORD-[A-Z0-9]+/i);
@@ -317,29 +366,34 @@ async function getAiResponse(userMessage, history) {
     }
   }
 
+  // Bangun konteks percakapan dalam format teks biasa
+  const historyText = history.length > 0
+    ? history.map(m => `${m.role === "user" ? "Customer" : "AI"}: ${m.content}`).join("\n")
+    : "";
+
+  const fullPrompt = `${KNOWLEDGE_BASE_MINI}${orderInfo}
+
+${historyText ? `Riwayat percakapan:\n${historyText}\n` : ""}Customer: ${userMessage}
+AI:`;
+
   for (const modelName of models) {
     try {
       console.log(`[AI] Using model: ${modelName}`);
-      const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: "v1beta" });
-      
-      const chat = model.startChat({
-        history: history.map(m => ({
-          role: m.role === "user" ? "user" : "model",
-          parts: [{ text: m.content }]
-        })),
-        systemInstruction: KNOWLEDGE_BASE_MINI + orderInfo,
-      });
-
-      const result = await chat.sendMessage(userMessage);
-      const response = await result.response;
-      return response.text();
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(fullPrompt);
+      return result.response.text();
     } catch (err) {
-      lastError = err;
-      if (err.status === 404 || err.status === 429 || err.message?.includes("quota") || err.message?.includes("not found")) {
-        console.warn(`[WARN] ${modelName} unavailable. Trying next model...`);
+      const errMsg = err.message || "";
+      if (err.status === 400 && errMsg.includes("API_KEY_INVALID")) {
+        console.error("[FATAL] API Key Gemini tidak valid!");
+        break;
+      }
+      if (err.status === 404 || err.status === 429 || errMsg.includes("quota")) {
+        console.warn(`[WARN] ${modelName} unavailable (${err.status}). Trying next...`);
         continue;
       }
-      break; 
+      console.error(`[AI ERROR] ${modelName}:`, err.status, errMsg.slice(0, 100));
+      break;
     }
   }
   return null;
@@ -352,14 +406,35 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     const orderNumber = req.body.orderId;
     const customerReason = req.body.reason || "Tidak ada penjelasan";
 
+    console.log("[DEBUG] /api/analyze - orderId received:", JSON.stringify(req.body));
+
     if (!file) return res.status(400).json({ error: "No file uploaded" });
+    if (!orderNumber || orderNumber.trim() === "") {
+      return res.status(400).json({ error: "Order ID tidak ditemukan. Mulai ulang proses klaim." });
+    }
 
     // 1. Ambil data pesanan untuk mendapatkan foto produk asli dari API
-    const orderData = await getOrderDetails(orderNumber);
+    let orderData = await getOrderDetails(orderNumber);
     if (!orderData) return res.status(404).json({ error: "Order data not found. Please verify order number." });
 
+    // Handle jika API mengembalikan array (endpoint tidak spesifik) — cari berdasarkan order_number
+    if (Array.isArray(orderData)) {
+      console.warn("[WARN] getOrderDetails returned array — searching for:", orderNumber);
+      orderData = orderData.find(o => 
+        o.order_number === orderNumber || o.order_number === orderNumber.toUpperCase()
+      ) || null;
+      if (!orderData) return res.status(404).json({ error: "Order tidak ditemukan di sistem." });
+    }
+
     const originalProducts = [];
-    for (const item of orderData.items) {
+    const items = Array.isArray(orderData.items) ? orderData.items : [];
+
+    if (items.length === 0) {
+      console.warn("[WARN] No items in order:", orderNumber, "orderData keys:", Object.keys(orderData));
+      return res.status(404).json({ error: "Data item pesanan tidak ditemukan." });
+    }
+
+    for (const item of items) {
       const b64 = await getImageAsBase64(`${ECOM_STORAGE_BASE}${item.product.image_path}`);
       if (b64) {
         originalProducts.push({
@@ -397,27 +472,37 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       }
     `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: "v1beta" });
+    const visionModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
+    let analysisResult = null;
 
     // Siapkan array gambar (Semua produk asli + 1 foto pelanggan)
     const imageParts = originalProducts.map(p => ({
       inlineData: { data: p.base64, mimeType: p.mimeType }
     }));
-    
     imageParts.push({
       inlineData: { data: customerPhotoB64, mimeType: file.mimetype }
     });
 
-    const result = await model.generateContent([prompt, ...imageParts]);
-    const response = await result.response;
-    const text = response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const analysisResult = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    for (const vModelName of visionModels) {
+      try {
+        console.log(`[VISION] Using model: ${vModelName}`);
+        const model = genAI.getGenerativeModel({ model: vModelName });
+        const result = await model.generateContent([prompt, ...imageParts]);
+        const text = result.response.text();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        analysisResult = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        if (analysisResult) break;
+      } catch (vErr) {
+        console.error(`[VISION ERROR] ${vModelName}:`, vErr.status, vErr.message?.slice(0, 120));
+        if (vErr.status === 429 || vErr.status === 404) continue;
+        break;
+      }
+    }
 
-    if (!analysisResult) throw new Error("Vision analysis failed to produce JSON");
+    if (!analysisResult) throw new Error("Vision analysis failed to produce valid JSON");
     res.json(analysisResult);
   } catch (error) {
-    console.error("Analysis Error:", error);
+    console.error("Analysis Error:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -436,6 +521,9 @@ app.post("/api/log-refund", async (req, res) => {
   }
 });
 
+// Counter kegagalan AI per room (untuk escalasi otomatis ke human)
+const aiFailCount = {};
+
 // --- WebSocket Logic ---
 io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
@@ -444,6 +532,13 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     console.log(`User joined room: ${roomId}`);
     try {
+      // Cek apakah room ini sudah diarsipkan
+      const claimCheck = await pool.query("SELECT archived FROM claims WHERE room_id = $1", [roomId]);
+      if (claimCheck.rows.length > 0 && claimCheck.rows[0].archived === true) {
+        // Room diarsipkan — beritahu customer untuk mulai sesi baru
+        socket.emit("chat_archived");
+        return;
+      }
       const res = await pool.query("SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC", [roomId]);
       socket.emit("load_history", res.rows);
     } catch (err) {
@@ -454,7 +549,37 @@ io.on("connection", (socket) => {
   socket.on("send_message", async (data) => {
     const { roomId, content, role } = data;
     try {
-      // 1. Simpan pesan user ke DB
+      // 2. Cek status klaim untuk menentukan mode (AI atau Human)
+      const claimRes = await pool.query("SELECT mode FROM claims WHERE room_id = $1", [roomId]);
+      const mode = claimRes.rows.length > 0 ? claimRes.rows[0].mode : "ai";
+
+      // Ambil history SEBELUM insert — agar pesan saat ini tidak masuk history Gemini
+      let roomHistory = [];
+      if (mode === "ai" && role === "user") {
+        const historyRes = await pool.query(
+          "SELECT role, content FROM messages WHERE room_id = $1 ORDER BY timestamp ASC",
+          [roomId]
+        );
+        // Filter: hanya ambil pasangan user-model yang valid untuk Gemini Chat
+        const rawHistory = historyRes.rows.map(r => ({
+          role: r.role === "user" ? "user" : "model",
+          content: r.content
+        }));
+        // Pastikan history diawali dengan "user" dan tidak ada dua role berturut
+        const filtered = [];
+        for (const msg of rawHistory) {
+          if (filtered.length === 0 && msg.role !== "user") continue;
+          if (filtered.length > 0 && filtered[filtered.length - 1].role === msg.role) continue;
+          filtered.push(msg);
+        }
+        // History untuk Gemini tidak boleh diakhiri "user" (karena kita akan sendMessage user)
+        if (filtered.length > 0 && filtered[filtered.length - 1].role === "user") {
+          filtered.pop();
+        }
+        roomHistory = filtered.slice(-8); // Maks 8 pesan terakhir
+      }
+
+      // 1. Simpan pesan user ke DB SETELAH ambil history
       const insertRes = await pool.query(
         "INSERT INTO messages (room_id, role, content, type) VALUES ($1, $2, $3, $4) RETURNING *",
         [roomId, role, content, "text"]
@@ -462,44 +587,55 @@ io.on("connection", (socket) => {
       const userMsg = insertRes.rows[0];
       io.to(roomId).emit("new_message", userMsg);
 
-      // 2. Cek status klaim untuk menentukan mode (AI atau Human)
-      const claimRes = await pool.query("SELECT mode FROM claims WHERE room_id = $1", [roomId]);
-      const mode = claimRes.rows.length > 0 ? claimRes.rows[0].mode : "ai";
-
       if (mode === "ai" && role === "user") {
-        const historyRes = await pool.query(
-          "SELECT role, content FROM messages WHERE room_id = $1 ORDER BY timestamp DESC LIMIT 5",
-          [roomId]
-        );
-        const roomHistory = historyRes.rows.map(r => ({ role: r.role, content: r.content })).reverse();
-        
         const aiContent = await getAiResponse(content, roomHistory);
-        
+
         if (aiContent === null) {
-          const quotaMsg = "Maaf, sistem AI kami sedang sibuk. Mohon tunggu agen manusia.";
-          const aiInsert = await pool.query(
-            "INSERT INTO messages (room_id, role, content) VALUES ($1, $2, $3) RETURNING *",
-            [roomId, "ai", quotaMsg]
-          );
-          io.to(roomId).emit("new_message", aiInsert.rows[0]);
-          
-          await pool.query("INSERT INTO claims (room_id, order_id, mode) VALUES ($1, $2, $3) ON CONFLICT (room_id) DO UPDATE SET mode = 'human'", [roomId, "Unknown", "human"]);
-          io.to(roomId).emit("mode_update", { mode: "human" });
-          
-          io.emit("new_claim_alert", { id: roomId, content: "AI Quota Exceeded. Human needed." });
+          aiFailCount[roomId] = (aiFailCount[roomId] || 0) + 1;
+
+          if (aiFailCount[roomId] >= 2) {
+            delete aiFailCount[roomId];
+            const escalateMsg = "Mohon maaf, sistem AI kami sedang tidak tersedia. Kami menghubungkan Anda dengan agen manusia. Mohon tunggu sebentar.";
+            const aiInsert = await pool.query(
+              "INSERT INTO messages (room_id, role, content) VALUES ($1, $2, $3) RETURNING *",
+              [roomId, "ai", escalateMsg]
+            );
+            io.to(roomId).emit("new_message", aiInsert.rows[0]);
+            await pool.query(
+              "INSERT INTO claims (room_id, order_id, mode) VALUES ($1, $2, $3) ON CONFLICT (room_id) DO UPDATE SET mode = 'human'",
+              [roomId, "Unknown", "human"]
+            );
+            io.to(roomId).emit("mode_update", { mode: "human" });
+            io.emit("new_claim_alert", {
+              id: roomId, orderId: "Unknown",
+              content: "AI tidak tersedia — escalasi otomatis ke agen manusia",
+              claimData: { item: "Escalasi AI", reason: content }
+            });
+          } else {
+            const retryMsg = "Mohon maaf, saya sedang mengalami gangguan teknis sesaat. Silakan kirim pesan Anda kembali.";
+            const aiInsert = await pool.query(
+              "INSERT INTO messages (room_id, role, content) VALUES ($1, $2, $3) RETURNING *",
+              [roomId, "ai", retryMsg]
+            );
+            io.to(roomId).emit("new_message", aiInsert.rows[0]);
+          }
           return;
         }
 
+        delete aiFailCount[roomId];
         const cleanContent = aiContent.replace(/\[INTENT:.*?\]/g, "").trim();
         let intent = "general";
         if (aiContent.includes("[INTENT:COMPLAINT]")) intent = "verify_order";
         if (aiContent.includes("[INTENT:REQUEST_PHOTO]")) intent = "request_photo";
 
+        const orderIdMatch = aiContent.match(/ORD-[A-Z0-9]+/i) || content.match(/ORD-[A-Z0-9]+/i);
+        const extractedOrderId = orderIdMatch ? orderIdMatch[0] : null;
+
         const aiInsert = await pool.query(
           "INSERT INTO messages (room_id, role, content) VALUES ($1, $2, $3) RETURNING *",
           [roomId, "ai", cleanContent]
         );
-        const aiMsg = { ...aiInsert.rows[0], intent };
+        const aiMsg = { ...aiInsert.rows[0], intent, orderId: extractedOrderId };
         io.to(roomId).emit("new_message", aiMsg);
       }
     } catch (err) {
@@ -552,7 +688,10 @@ io.on("connection", (socket) => {
   socket.on("join_admin", async () => {
     socket.join("admin_room");
     try {
-      const res = await pool.query("SELECT * FROM claims ORDER BY created_at DESC");
+      // Hanya muat klaim yang BELUM diarsipkan untuk antrean aktif
+      const res = await pool.query(
+        "SELECT * FROM claims WHERE archived = false OR archived IS NULL ORDER BY created_at DESC"
+      );
       socket.emit("load_claims", res.rows.map(c => ({
         id: c.room_id,
         orderId: c.order_id,

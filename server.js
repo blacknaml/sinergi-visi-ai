@@ -61,8 +61,10 @@ pool.connect(async (err, client, release) => {
         item_name VARCHAR(255),
         price DECIMAL(12, 2),
         status VARCHAR(50) DEFAULT 'pending',
+        decision VARCHAR(50) DEFAULT 'pending',
         mode VARCHAR(50) DEFAULT 'ai',
         analysis_result JSONB,
+        archived BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -252,6 +254,7 @@ app.get("/api/claims", authenticateAgent, async (req, res) => {
       item: c.item_name,
       price: c.price,
       status: c.status,
+      decision: c.decision,
       mode: c.mode,
       archived: c.archived,
       analysis: c.analysis_result,
@@ -276,6 +279,39 @@ app.patch("/api/claims/:roomId/archive", authenticateAgent, async (req, res) => 
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Gagal mengarsipkan klaim." });
+  }
+});
+
+app.patch("/api/claims/:roomId/decision", authenticateAgent, async (req, res) => {
+  const { roomId } = req.params;
+  const { decision, note } = req.body; // decision: 'approved' | 'rejected'
+  
+  if (!['approved', 'rejected'].includes(decision)) {
+    return res.status(400).json({ error: "Keputusan tidak valid." });
+  }
+
+  try {
+    await pool.query("UPDATE claims SET decision = $1 WHERE room_id = $2", [decision, roomId]);
+    
+    // Kirim pesan otomatis ke chat
+    const systemMsg = decision === 'approved' 
+      ? `✅ KEPUTUSAN AGEN: Pengajuan Refund DISETUJUI. Dana akan dikembalikan ke metode pembayaran asal dalam 1-3 hari kerja.`
+      : `❌ KEPUTUSAN AGEN: Pengajuan Refund DITOLAK. ${note || "Berdasarkan hasil inspeksi, kerusakan tidak memenuhi kriteria pengembalian."}`;
+    
+    const insertRes = await pool.query(
+      "INSERT INTO messages (room_id, role, content, type) VALUES ($1, $2, $3, $4) RETURNING *",
+      [roomId, "agent", systemMsg, "text"]
+    );
+    
+    io.to(roomId).emit("new_message", insertRes.rows[0]);
+    
+    await logEvent(req.agent.id, req.agent.email, "CLAIM_DECISION", 
+      `Klaim ${roomId} status: ${decision.toUpperCase()}`, req.ip);
+      
+    res.json({ success: true, message: insertRes.rows[0] });
+  } catch (err) {
+    console.error("Error updating decision:", err);
+    res.status(500).json({ error: "Gagal menyimpan keputusan." });
   }
 });
 
@@ -441,6 +477,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     }
 
     for (const item of items) {
+      console.log("[DEBUG] /api/analyze - image:", JSON.stringify(item.product));
       const b64 = await getImageAsBase64(`${ECOM_STORAGE_BASE}${item.product.image_path}`);
       if (b64) {
         originalProducts.push({
@@ -448,6 +485,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
           base64: b64,
           mimeType: "image/png"
         });
+        console.log("[DEBUG] /api/analyze - image:", JSON.stringify(originalProducts));
       }
     }
 
@@ -506,7 +544,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     }
 
     if (!analysisResult) throw new Error("Vision analysis failed to produce valid JSON");
-    res.json(analysisResult);
+    res.json({ ...analysisResult, totalPrice: orderData.total_price });
   } catch (error) {
     console.error("Analysis Error:", error.message);
     res.status(500).json({ error: error.message });
@@ -541,12 +579,10 @@ io.on("connection", (socket) => {
       // Cek apakah room ini sudah diarsipkan
       const claimCheck = await pool.query("SELECT archived FROM claims WHERE room_id = $1", [roomId]);
       if (claimCheck.rows.length > 0 && claimCheck.rows[0].archived === true) {
-        // Room diarsipkan — beritahu customer untuk mulai sesi baru
         socket.emit("chat_archived");
-        return;
       }
       const res = await pool.query("SELECT * FROM messages WHERE room_id = $1 ORDER BY timestamp ASC", [roomId]);
-      socket.emit("load_history", res.rows);
+      socket.emit("load_history", { roomId, history: res.rows });
     } catch (err) {
       console.error("Error loading history:", err);
     }

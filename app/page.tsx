@@ -117,7 +117,7 @@ export default function Home() {
       if (mode === "human") setChatStatus("human");
     });
 
-    socket.on("load_history", (history: Message[]) => {
+    socket.on("load_history", ({ roomId, history }: { roomId: string, history: Message[] }) => {
       if (history.length > 0) {
         setMessages(history);
         // Restore currentOrder dari history jika ada order ID yang tersebut
@@ -261,26 +261,27 @@ export default function Home() {
         return;
       }
 
-      const decision = evaluateClaim(analysis.isDamaged, analysis.confidence, currentOrder.price);
+      const refundAmount = parseFloat(analysis.totalPrice) || parseFloat(currentOrder?.price) || 0;
+      const decision = evaluateClaim(analysis.isDamaged, analysis.confidence, refundAmount);
 
       if (decision.status === "approved") {
-        addMessage("ai", `Analisis Selesai: ${analysis.description}. Karena nilai pesanan di bawah Rp 500.000, saya telah menyetujui refund Anda secara otomatis!`, "result", { status: "approved", amount: currentOrder.price });
+        addMessage("ai", `Analisis Selesai: ${analysis.description}. Karena nilai pesanan di bawah Rp 500.000, saya telah menyetujui refund Anda secara otomatis!`, "result", { status: "approved", amount: refundAmount });
         
         // Log Refund ke PostgreSQL
         fetch("http://localhost:3001/api/log-refund", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: currentOrder.id, amount: currentOrder.price })
+          body: JSON.stringify({ orderId: currentOrder.id, amount: refundAmount })
         });
 
         // Simpan Claim Status ke PostgreSQL via WebSocket
         if (socketRef.current) {
           socketRef.current.emit("request_handoff", {
-            roomId: currentOrder.id,
+            roomId: sessionId,
             claimData: {
               orderId: currentOrder.id,
               item: currentOrder.item,
-              price: currentOrder.price,
+              price: refundAmount,
               status: "approved",
               analysis: analysis,
               reason: "AI Auto-Approved"
@@ -288,17 +289,18 @@ export default function Home() {
           });
         }
       } else {
-        addMessage("ai", `Analisis Selesai: ${analysis.description}. ${decision.reason}`, "result", { status: "pending", amount: currentOrder.price });
+        addMessage("ai", `Analisis Selesai: ${analysis.description}. ${decision.reason}`, "result", { status: "pending", amount: refundAmount });
         
         // Trigger Human Handoff via WebSocket
         setChatStatus("waiting");
         if (socketRef.current) {
           socketRef.current.emit("request_handoff", {
-            roomId: currentOrder.id,
+            roomId: sessionId,
             claimData: {
               orderId: currentOrder.id,
               item: currentOrder.item,
-              price: currentOrder.price,
+              price: refundAmount,
+              status: "pending",
               analysis: analysis,
               reason: decision.reason,
               imageUrl: imageData
@@ -422,7 +424,7 @@ export default function Home() {
                       </div>
                       <p className="text-sm">{msg.content}</p>
                       <div className="text-xs p-2 bg-black/20 rounded border border-white/5">
-                        <p>Nilai Refund: <span className="font-mono text-cyan-400">Rp {msg.data.amount.toLocaleString('id-ID')}</span></p>
+                        <p>Nilai Refund: <span className="font-mono text-cyan-400">Rp {(msg.data?.amount || 0).toLocaleString('id-ID')}</span></p>
                       </div>
                     </div>
                   )}

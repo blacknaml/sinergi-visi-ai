@@ -33,6 +33,7 @@ type Claim = {
   reason: string;
   analysis: any;
   status: "pending" | "active" | "completed";
+  decision?: "pending" | "approved" | "rejected";
   messages: { role: "user" | "agent" | "ai"; content: string; id: string | number; imageUrl?: string }[];
   imageUrl?: string;
 };
@@ -290,6 +291,7 @@ export default function AdminDashboard() {
         reason: c.analysis?.reason || "Menunggu review",
         analysis: c.analysis || { damageType: "Pending", confidence: 0 },
         status: c.status === "pending" ? "pending" : "active",
+        decision: c.decision || "pending",
         messages: []
       }));
       setClaims(mapped);
@@ -309,9 +311,9 @@ export default function AdminDashboard() {
       }));
     });
 
-    socket.on("load_history", (history: any[]) => {
+    socket.on("load_history", ({ roomId, history }: { roomId: string, history: any[] }) => {
       setClaims(prev => prev.map(c => {
-        if (history.length > 0 && history.some(h => h.room_id === c.id || h.roomId === c.id)) {
+        if (c.id === roomId) {
           const latestPhoto = [...history].reverse().find(h => h.image_url || h.imageUrl);
           return {
             ...c,
@@ -350,6 +352,7 @@ export default function AdminDashboard() {
           reason: c.analysis?.reason || "Diarsipkan",
           analysis: c.analysis || { damageType: "-", confidence: 0 },
           status: "completed" as const,
+          decision: c.decision || "pending",
           messages: []
         })));
       })
@@ -404,6 +407,22 @@ export default function AdminDashboard() {
       console.error("Archive error:", err);
     } finally {
       setIsArchiving(false);
+    }
+  };
+
+  const handleDecision = async (claimId: string, decision: "approved" | "rejected") => {
+    if (!authToken) return;
+    try {
+      const res = await fetch(`http://localhost:3001/api/claims/${claimId}/decision`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
+        body: JSON.stringify({ decision })
+      });
+      if (res.ok) {
+        setClaims(prev => prev.map(c => c.id === claimId ? { ...c, decision } : c));
+      }
+    } catch (err) {
+      console.error("Decision error:", err);
     }
   };
 
@@ -573,6 +592,49 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
+
+              {/* Decision Panel (Quick Action) */}
+              {selectedClaim.status === "active" && selectedClaim.decision === "pending" && (
+                <div className="mx-6 mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-amber-200">Keputusan Akhir Dibutuhkan</p>
+                      <p className="text-xs text-amber-200/60">Tentukan apakah klaim ini layak mendapatkan refund atau tidak.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleDecision(selectedClaim.id, "rejected")}
+                      className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg transition-all"
+                    >
+                      Tolak Refund
+                    </button>
+                    <button
+                      onClick={() => handleDecision(selectedClaim.id, "approved")}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-emerald-500/20"
+                    >
+                      Setujui Refund
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Decision Result Badge */}
+              {selectedClaim.decision && selectedClaim.decision !== "pending" && (
+                <div className={`mx-6 mt-4 p-4 border rounded-2xl flex items-center gap-3 ${
+                  selectedClaim.decision === 'approved' 
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                    : "bg-red-500/10 border-red-500/20 text-red-400"
+                }`}>
+                  {selectedClaim.decision === 'approved' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                  <p className="text-sm font-bold">
+                    Keputusan: {selectedClaim.decision === 'approved' ? "REFUND DISETUJUI" : "REFUND DITOLAK"}
+                  </p>
+                </div>
+              )}
 
               <div className="flex-1 flex overflow-hidden">
                 {/* Details */}

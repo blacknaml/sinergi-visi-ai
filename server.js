@@ -485,7 +485,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
           base64: b64,
           mimeType: "image/png"
         });
-        console.log("[DEBUG] /api/analyze - image:", JSON.stringify(originalProducts));
+        // console.log("[DEBUG] /api/analyze - image:", JSON.stringify(originalProducts));
       }
     }
 

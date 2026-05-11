@@ -310,6 +310,7 @@ app.get("/api/security/stats", authenticateAgent, async (req, res) => {
 
 const ECOM_API_BASE = "http://127.0.0.1:8001/api/mcp";
 const ECOM_STORAGE_BASE = "http://127.0.0.1:8001/storage/";
+const MCP_TOKEN = process.env.MCP_TOKEN || "";
 
 // Helper: Ubah URL Gambar ke Base64 untuk Gemini
 async function getImageAsBase64(url) {
@@ -327,7 +328,12 @@ async function getImageAsBase64(url) {
 // Helper: Ambil Order dari API eCommerce
 async function getOrderDetails(orderNumber) {
   try {
-    const response = await fetch(`${ECOM_API_BASE}/orders/${orderNumber}`);
+    const response = await fetch(`${ECOM_API_BASE}/orders/${orderNumber}`, {
+      headers: {
+        'X-MCP-Token': MCP_TOKEN,
+        'Accept': 'application/json'
+      }
+    });
     if (!response.ok) return null;
     const data = await response.json();
     if (data.message === "Pesanan tidak ditemukan") return null;

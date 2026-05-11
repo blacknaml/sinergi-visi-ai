@@ -62,3 +62,73 @@ pnpm dev
 
 ---
 © 2026 Sinergi Visi AI - Solusi Support Agent Cerdas.
+
+<br/>
+<br/>
+
+---
+
+# English Version
+
+**SinergiVisi AI** is an intelligent customer service platform that integrates multimodal AI and human agent collaboration to simplify the damaged goods claim process and shopping assistance within the Sinergi Visi Ecommerce ecosystem.
+
+## 🚀 Key Features
+
+- **Multimodal AI Analysis**: Automated verification of damaged goods claims using **Gemini Vision**, comparing customer photos with original catalog photos in real-time.
+- **Seamless Human Handoff**: Smooth transition from AI to human agents based on intent detection or automatic escalation if the AI encounters technical issues.
+- **Real-time Chat**: Instant communication between customers, AI, and human agents using **Socket.IO**.
+- **Admin Dashboard**: A premium dashboard interface with *glassmorphism* design for managing claim queues, reviewing photos, and direct interaction with customers.
+- **E-commerce Integration**: Directly connected to the e-commerce database for order validation (ORD-...) and fetching original product data.
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15 (App Router), React, Tailwind CSS.
+- **Backend**: Node.js (Express), Socket.IO.
+- **AI Engine**: Google Gemini API (Models: 2.5 Flash, 2.0 Flash, 1.5 Flash).
+- **Database**: PostgreSQL (Message logs & Claim status).
+- **Storage Integration**: Laravel Storage (Artisan Serve) for product assets.
+
+## ⚙️ Setup & Installation
+
+### Prerequisites
+- Node.js v18+ & pnpm/npm.
+- PostgreSQL Database.
+- Google Generative AI API Key (AI Studio).
+- **Sinergi Visi Ecommerce** system running on port 8000/8001.
+
+### Environment Setup
+Create a `.env.local` file in the root directory:
+```env
+# Database
+DATABASE_URL=postgres://user:password@localhost:5432/sinergivisi_ai
+
+# AI & Auth
+GOOGLE_GENERATIVE_AI_API_KEY=AIzaSy...
+JWT_SECRET=your-secret-key
+
+# Ports
+PORT=3001
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+### Installation
+```bash
+# Install dependencies
+pnpm install
+
+# Run backend server (Integrated)
+node server.js
+
+# Run frontend development
+pnpm dev
+```
+
+## 📐 System Architecture
+
+1. **AI Mode**: Customer interacts with Gemini AI. AI detects complaint intent.
+2. **Analysis Mode**: AI requests a photo → Gemini Vision compares evidence photos with original photos from the eCommerce catalog.
+3. **Review Mode**: Analysis results are displayed → Customer confirms → Data is sent to the Admin Dashboard.
+4. **Human Mode**: A human agent takes over the chat (AI is disabled for that session) for final resolution.
+
+---
+© 2026 Sinergi Visi AI - Intelligent Support Agent Solution.

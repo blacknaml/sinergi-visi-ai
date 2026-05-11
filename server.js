@@ -27,28 +27,88 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// Verifikasi Koneksi Database
-pool.connect((err, client, release) => {
+// Verifikasi Koneksi & Inisialisasi Tabel Otomatis
+pool.connect(async (err, client, release) => {
   if (err) {
     return console.error("Database connection error:", err.stack);
   }
   console.log("PostgreSQL Connected!");
-  release();
+  
+  try {
+    // Inisialisasi tabel jika belum ada
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        room_id VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        content TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'text',
+        image_url TEXT,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS claims (
+        room_id VARCHAR(255) PRIMARY KEY,
+        order_id VARCHAR(255) NOT NULL,
+        item_name VARCHAR(255),
+        price DECIMAL(12, 2),
+        status VARCHAR(50) DEFAULT 'pending',
+        mode VARCHAR(50) DEFAULT 'ai',
+        analysis_result JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS refunds (
+        id SERIAL PRIMARY KEY,
+        order_id VARCHAR(255) NOT NULL,
+        amount DECIMAL(12, 2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'success',
+        processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Database Tables Verified/Created.");
+  } catch (dbErr) {
+    console.error("Error initializing tables:", dbErr);
+  } finally {
+    release();
+  }
 });
 
-// Mock eCommerce Database (Simulated MCP/RAG) - Tetap ada untuk referensi produk
-const ECOMMERCE_DB = {
-  "SV-1001": { item: "Piring Keramik Putih", price: 150000 },
-  "SV-1002": { item: "Gelas Kristal Premium", price: 250000 },
-  "SV-9001": { item: "Sendok Makan Stainless", price: 45000 },
-  "SV-2002": { item: "Mangkuk Soup Set", price: 600000 }
-};
+const ECOM_API_BASE = "http://127.0.0.1:8001/api/mcp";
+const ECOM_STORAGE_BASE = "http://127.0.0.1:8001/storage/";
+
+// Helper: Ubah URL Gambar ke Base64 untuk Gemini
+async function getImageAsBase64(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer).toString("base64");
+  } catch (error) {
+    console.error("Error fetching image:", url, error.message);
+    return null;
+  }
+}
+
+// Helper: Ambil Order dari API eCommerce
+async function getOrderDetails(orderNumber) {
+  try {
+    const response = await fetch(`${ECOM_API_BASE}/orders/${orderNumber}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.message === "Pesanan tidak ditemukan") return null;
+    return data;
+  } catch (error) {
+    console.error("Error fetching order:", orderNumber, error.message);
+    return null;
+  }
+}
 
 const KNOWLEDGE_BASE_MINI = `
 SinergiVisi AI: Toko pecah belah premium.
 ALUR KOMPLAIN WAJIB:
-1. Minta Nomor Order (SV-XXXX).
-2. CEK: Jika Nomor Order ada di database (Sebutkan item-nya), konfirmasikan ke customer.
+1. Minta Nomor Order (Format: ORD-XXXXXX).
+2. CEK: Jika Nomor Order valid, konfirmasikan item-item yang ada di pesanan tersebut.
 3. JANGAN minta foto sebelum Nomor Order tervalidasi.
 4. Jika Nomor Order Valid, baru minta customer upload foto bukti.
 5. Gunakan kode [INTENT:REQUEST_PHOTO] jika data order sudah benar dan siap menerima foto.
@@ -59,37 +119,30 @@ async function getAiResponse(userMessage, history) {
   const models = ["gemini-2.0-flash", "gemini-2.5-flash"];
   let lastError = null;
 
+  // Coba cari Nomor Order di pesan terakhir (Format ORD-...)
+  const orderMatch = userMessage.match(/ORD-[A-Z0-9]+/i);
+  let orderInfo = "";
+  if (orderMatch) {
+    const orderData = await getOrderDetails(orderMatch[0]);
+    if (orderData) {
+      const items = orderData.items.map(i => `- ${i.product.name} (Rp ${i.price})`).join("\n");
+      orderInfo = `\nDATA ORDER DITEMUKAN (${orderMatch[0]}):\n${items}\nSilakan konfirmasi produk mana yang bermasalah.`;
+    } else {
+      orderInfo = `\nDATA ORDER TIDAK DITEMUKAN untuk ${orderMatch[0]}. Mohon pastikan nomor order benar.`;
+    }
+  }
+
   for (const modelName of models) {
     try {
       console.log(`[AI] Using model: ${modelName}`);
-      const model = genAI.getGenerativeModel(
-        { model: modelName },
-        { apiVersion: "v1beta" }
-      );
-      const systemPrompt = `
-        Anda adalah SinergiVisi AI Customer Service. 
-        Pengetahuan: ${KNOWLEDGE_BASE_MINI}
-        Database Order (Simulasi): ${JSON.stringify(ECOMMERCE_DB)}
-        
-        Tugas Anda:
-        - Jawab pertanyaan umum pelanggan dengan ramah.
-        - Jika pelanggan ingin komplain:
-          1. WAJIB tanya Nomor Order.
-          2. Cek apakah Nomor Order ada di Database Order di atas.
-          3. Jika ADA: Sebutkan item-nya (misal: "Oh, pesanan SV-9001 untuk Sendok Stainless ya?") dan tanyakan detail kerusakannya.
-          4. Jika SUDAH JELAS: Minta foto bukti dan sisipkan kode [INTENT:REQUEST_PHOTO] di akhir jawaban.
-          5. Jika TIDAK ADA: Beritahu pelanggan bahwa nomor order tidak ditemukan.
-      `;
+      const model = genAI.getGenerativeModel({ model: modelName }, { apiVersion: "v1beta" });
       
       const chat = model.startChat({
-        history: [
-          { role: "user", parts: [{ text: systemPrompt }] },
-          { role: "model", parts: [{ text: "Siap." }] },
-          ...history.map(m => ({
-            role: m.role === "user" ? "user" : "model",
-            parts: [{ text: m.content }]
-          }))
-        ],
+        history: history.map(m => ({
+          role: m.role === "user" ? "user" : "model",
+          parts: [{ text: m.content }]
+        })),
+        systemInstruction: KNOWLEDGE_BASE_MINI + orderInfo,
       });
 
       const result = await chat.sendMessage(userMessage);
@@ -111,23 +164,41 @@ async function getAiResponse(userMessage, history) {
 app.post("/api/analyze", upload.single("file"), async (req, res) => {
   try {
     const file = req.file;
-    const orderItem = req.body.item || "Produk";
+    const orderNumber = req.body.orderId;
+    const customerReason = req.body.reason || "Tidak ada penjelasan";
 
     if (!file) return res.status(400).json({ error: "No file uploaded" });
 
-    const base64Image = file.buffer.toString("base64");
-    const customerReason = req.body.reason || "Tidak ada penjelasan";
+    // 1. Ambil data pesanan untuk mendapatkan foto produk asli dari API
+    const orderData = await getOrderDetails(orderNumber);
+    if (!orderData) return res.status(404).json({ error: "Order data not found. Please verify order number." });
+
+    const originalProducts = [];
+    for (const item of orderData.items) {
+      const b64 = await getImageAsBase64(`${ECOM_STORAGE_BASE}${item.product.image_path}`);
+      if (b64) {
+        originalProducts.push({
+          name: item.product.name,
+          base64: b64,
+          mimeType: "image/png"
+        });
+      }
+    }
+
+    const customerPhotoB64 = file.buffer.toString("base64");
+    
+    // 2. Prompt Vision: Membandingkan Foto Pelanggan dengan Foto Katalog
     const prompt = `
       Anda adalah pakar inspeksi kualitas SinergiVisi AI.
-      Tugas Anda adalah memvalidasi klaim kerusakan untuk item: "${orderItem}".
-      Alasan kerusakan dari pelanggan: "${customerReason}".
+      Tugas Anda adalah membandingkan FOTO PELANGGAN (gambar terakhir) dengan FOTO PRODUK ASLI dari katalog kami (gambar-gambar sebelumnya).
+
+      ALASAN PELANGGAN: "${customerReason}"
 
       LANGKAH ANALISIS:
-      1. VERIFIKASI PRODUK: Apakah benda di foto ini adalah "${orderItem}"? 
-         (match: true/false)
-      2. VERIFIKASI KERUSAKAN: Apakah tipe kerusakan di foto SESUAI dengan alasan pelanggan ("${customerReason}")?
-         Contoh: Jika alasan "Pecah" tapi di foto cuma "Lecet", maka isDamageMatch: false.
-      3. ANALISIS AKHIR: Apakah ada kerusakan fisik yang nyata?
+      1. Identifikasi apakah barang di FOTO PELANGGAN ada di dalam daftar PRODUK ASLI.
+      2. Berikan isProductMatch: true jika cocok dengan salah satu produk dalam order ini.
+      3. Periksa apakah ada kerusakan fisik di FOTO PELANGGAN yang sesuai dengan ALASAN PELANGGAN.
+      4. Jika alasan "Pecah" tapi di foto cuma "Lecet", maka isDamageMatch: false.
 
       Berikan output dalam format JSON:
       {
@@ -136,36 +207,29 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         "isDamaged": boolean,
         "confidence": number (0-1),
         "description": "string",
-        "detectedItem": "string",
-        "detectedDamage": "string"
+        "detectedItem": "string (Nama barang yang terdeteksi)",
+        "detectedDamage": "string (Jenis kerusakan yang terlihat)"
       }
     `;
 
-    const modelsToTry = ["gemini-2.0-flash", "gemini-2.5-flash"];
-    let analysisResult = null;
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }, { apiVersion: "v1beta" });
 
-    for (const modelName of modelsToTry) {
-      try {
-        console.log(`[ANALYSIS] Using: ${modelName}`);
-        const model = genAI.getGenerativeModel(
-          { model: modelName },
-          { apiVersion: "v1beta" }
-        );
-        const result = await model.generateContent([
-          prompt,
-          { inlineData: { data: base64Image, mimeType: file.mimetype } }
-        ]);
-        const response = await result.response;
-        const text = response.text();
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        analysisResult = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-        break;
-      } catch (err) {
-        console.warn(`[ANALYSIS] ${modelName} failed. Trying next...`);
-      }
-    }
+    // Siapkan array gambar (Semua produk asli + 1 foto pelanggan)
+    const imageParts = originalProducts.map(p => ({
+      inlineData: { data: p.base64, mimeType: p.mimeType }
+    }));
+    
+    imageParts.push({
+      inlineData: { data: customerPhotoB64, mimeType: file.mimetype }
+    });
 
-    if (!analysisResult) throw new Error("All analysis models failed");
+    const result = await model.generateContent([prompt, ...imageParts]);
+    const response = await result.response;
+    const text = response.text();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const analysisResult = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+    if (!analysisResult) throw new Error("Vision analysis failed to produce JSON");
     res.json(analysisResult);
   } catch (error) {
     console.error("Analysis Error:", error);

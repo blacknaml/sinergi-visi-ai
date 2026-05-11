@@ -5,6 +5,10 @@ const { Server } = require("socket.io");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const multer = require("multer");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const JWT_SECRET = process.env.JWT_SECRET || "sinergivisi-secret-key-change-in-production";
 
 const app = express();
 app.use(cors({ origin: "http://localhost:3000" }));
@@ -65,12 +69,193 @@ pool.connect(async (err, client, release) => {
         status VARCHAR(50) DEFAULT 'success',
         processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS agents (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role VARCHAR(50) DEFAULT 'agent',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS agent_logs (
+        id SERIAL PRIMARY KEY,
+        agent_id INTEGER REFERENCES agents(id) ON DELETE SET NULL,
+        agent_email VARCHAR(255),
+        event_type VARCHAR(50) NOT NULL,
+        description TEXT,
+        ip_address VARCHAR(100),
+        success BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     console.log("Database Tables Verified/Created.");
+
+    // Seed default admin jika tabel agents masih kosong
+    const agentCount = await client.query("SELECT COUNT(*) FROM agents");
+    if (parseInt(agentCount.rows[0].count) === 0) {
+      const defaultPassword = await bcrypt.hash("admin123", 10);
+      await client.query(
+        "INSERT INTO agents (name, email, password_hash, role) VALUES ($1, $2, $3, $4)",
+        ["Admin SinergiVisi", "admin@sinergivisi.ai", defaultPassword, "admin"]
+      );
+      console.log("Default admin account created: admin@sinergivisi.ai / admin123");
+    }
   } catch (dbErr) {
     console.error("Error initializing tables:", dbErr);
   } finally {
     release();
+  }
+});
+
+// --- Auth Middleware ---
+const authenticateAgent = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Akses ditolak. Token tidak ditemukan." });
+
+  jwt.verify(token, JWT_SECRET, (err, agent) => {
+    if (err) return res.status(403).json({ error: "Token tidak valid atau sudah kedaluwarsa." });
+    req.agent = agent;
+    next();
+  });
+};
+
+// Helper: Catat aktivitas ke agent_logs
+async function logEvent(agentId, agentEmail, eventType, description, ip, success = true) {
+  try {
+    await pool.query(
+      "INSERT INTO agent_logs (agent_id, agent_email, event_type, description, ip_address, success) VALUES ($1, $2, $3, $4, $5, $6)",
+      [agentId || null, agentEmail, eventType, description, ip, success]
+    );
+  } catch (e) { console.error("Log error:", e.message); }
+}
+
+// --- Auth Endpoints ---
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+  const ip = req.ip || req.socket.remoteAddress;
+  if (!email || !password) return res.status(400).json({ error: "Email dan password wajib diisi." });
+
+  try {
+    const result = await pool.query("SELECT * FROM agents WHERE email = $1", [email]);
+    const agent = result.rows[0];
+    if (!agent) {
+      await logEvent(null, email, "LOGIN_FAILED", "Email tidak ditemukan", ip, false);
+      return res.status(401).json({ error: "Email atau password salah." });
+    }
+    if (!agent.is_active) {
+      await logEvent(agent.id, email, "LOGIN_BLOCKED", "Akun dinonaktifkan", ip, false);
+      return res.status(403).json({ error: "Akun Anda telah dinonaktifkan." });
+    }
+
+    const isValid = await bcrypt.compare(password, agent.password_hash);
+    if (!isValid) {
+      await logEvent(agent.id, email, "LOGIN_FAILED", "Password salah", ip, false);
+      return res.status(401).json({ error: "Email atau password salah." });
+    }
+
+    const token = jwt.sign(
+      { id: agent.id, email: agent.email, name: agent.name, role: agent.role },
+      JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    await logEvent(agent.id, email, "LOGIN_SUCCESS", "Login berhasil", ip, true);
+    res.json({ token, agent: { id: agent.id, name: agent.name, email: agent.email, role: agent.role } });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Terjadi kesalahan server." });
+  }
+});
+
+app.get("/api/auth/me", authenticateAgent, (req, res) => {
+  res.json({ agent: req.agent });
+});
+
+// --- Agents Management Endpoints ---
+app.get("/api/agents", authenticateAgent, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT id, name, email, role, is_active, created_at FROM agents ORDER BY created_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil data agen." });
+  }
+});
+
+app.post("/api/agents", authenticateAgent, async (req, res) => {
+  if (req.agent.role !== "admin") return res.status(403).json({ error: "Hanya admin yang bisa menambah agen." });
+  const { name, email, password, role } = req.body;
+  if (!name || !email || !password) return res.status(400).json({ error: "Nama, email, dan password wajib diisi." });
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      "INSERT INTO agents (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, is_active, created_at",
+      [name, email, hash, role || "agent"]
+    );
+    await logEvent(req.agent.id, req.agent.email, "AGENT_CREATED", `Membuat agen baru: ${email}`, req.ip);
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === "23505") return res.status(409).json({ error: "Email sudah terdaftar." });
+    res.status(500).json({ error: "Gagal menambah agen." });
+  }
+});
+
+app.patch("/api/agents/:id", authenticateAgent, async (req, res) => {
+  if (req.agent.role !== "admin") return res.status(403).json({ error: "Hanya admin yang bisa mengubah agen." });
+  const { id } = req.params;
+  const { is_active } = req.body;
+  try {
+    await pool.query("UPDATE agents SET is_active = $1 WHERE id = $2", [is_active, id]);
+    await logEvent(req.agent.id, req.agent.email, "AGENT_UPDATED", `Status agen ID ${id} diubah ke ${is_active ? 'aktif' : 'nonaktif'}`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Gagal memperbarui agen." });
+  }
+});
+
+app.delete("/api/agents/:id", authenticateAgent, async (req, res) => {
+  if (req.agent.role !== "admin") return res.status(403).json({ error: "Hanya admin yang bisa menghapus agen." });
+  const { id } = req.params;
+  if (parseInt(id) === req.agent.id) return res.status(400).json({ error: "Tidak bisa menghapus akun sendiri." });
+  try {
+    const agentRes = await pool.query("SELECT email FROM agents WHERE id = $1", [id]);
+    await pool.query("DELETE FROM agents WHERE id = $1", [id]);
+    await logEvent(req.agent.id, req.agent.email, "AGENT_DELETED", `Menghapus agen: ${agentRes.rows[0]?.email}`, req.ip);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Gagal menghapus agen." });
+  }
+});
+
+// --- Security Logs Endpoints ---
+app.get("/api/security/logs", authenticateAgent, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM agent_logs ORDER BY created_at DESC LIMIT 100"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil log keamanan." });
+  }
+});
+
+app.get("/api/security/stats", authenticateAgent, async (req, res) => {
+  try {
+    const [total, failed, today] = await Promise.all([
+      pool.query("SELECT COUNT(*) FROM agent_logs"),
+      pool.query("SELECT COUNT(*) FROM agent_logs WHERE success = false"),
+      pool.query("SELECT COUNT(*) FROM agent_logs WHERE created_at >= NOW() - INTERVAL '24 hours'")
+    ]);
+    res.json({
+      total: parseInt(total.rows[0].count),
+      failed: parseInt(failed.rows[0].count),
+      today: parseInt(today.rows[0].count)
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil statistik." });
   }
 });
 

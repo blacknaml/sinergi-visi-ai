@@ -23,6 +23,7 @@ type Message = {
   content: string;
   type?: "text" | "upload" | "analysis" | "result";
   data?: any;
+  imageUrl?: string;
   timestamp?: string;
 };
 
@@ -45,14 +46,7 @@ export default function Home() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<any>(null);
 
-  // Mock Orders
-  const mockOrders: Record<string, any> = {
-    "SV-9901": { id: "SV-9901", item: "Set Gelas Kristal (6pcs)", price: 350000, status: "Delivered" },
-    "SV-9902": { id: "SV-9902", item: "Piring Keramik Premium (12pcs)", price: 1200000, status: "Delivered" },
-    "SV-9903": { id: "SV-9903", item: "Set Sendok Stainless Gold", price: 150000, status: "Delivered" },
-    "SV-9001": { id: "SV-9001", item: "Set Garpu Stainless Premium", price: 120000, status: "Delivered" },
-    "SV-9002": { id: "SV-9002", item: "Cangkir Keramik Motif", price: 85000, status: "Delivered" },
-  };
+  // Data pesanan akan diambil secara dinamis dari API via Server.js
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -85,22 +79,12 @@ export default function Home() {
         setIsTyping(false);
         if (msg.content.includes("[INTENT:REQUEST_PHOTO]")) {
           setStep("upload");
-          const orderMatch = msg.content.match(/SV-\d+/);
+          const orderMatch = msg.content.match(/ORD-[A-Z0-9]+/i);
           if (orderMatch) {
             const orderId = orderMatch[0];
-            const mockDB: any = {
-              "SV-1001": { item: "Piring Keramik Putih", price: 150000 },
-              "SV-1002": { item: "Gelas Kristal Premium", price: 250000 },
-              "SV-9001": { item: "Sendok Makan Stainless", price: 45000 },
-              "SV-2002": { item: "Mangkuk Soup Set", price: 600000 }
-            };
-            if (mockDB[orderId]) {
-              setCurrentOrder({ id: orderId, ...mockDB[orderId] });
-              // PENTING: Pindahkan pelanggan ke room spesifik order agar bisa chat dengan agen
-              if (socketRef.current) {
-                socketRef.current.emit("join_room", { roomId: orderId });
-                console.log("Customer joined specific order room:", orderId);
-              }
+            setCurrentOrder({ id: orderId }); 
+            if (socketRef.current) {
+              socketRef.current.emit("join_room", { roomId: orderId });
             }
           }
         }
@@ -145,22 +129,6 @@ export default function Home() {
     });
 
     setInputValue("");
-
-    if (step === "order_id") {
-      setIsTyping(true);
-      await new Promise(r => setTimeout(r, 1000));
-      
-      const order = mockOrders[userText.toUpperCase()];
-      if (order) {
-        setCurrentOrder(order);
-        socketRef.current.emit("join_room", { roomId: order.id, orderId: order.id });
-        addMessage("ai", `Terima kasih! Saya menemukan pesanan Anda: **${order.item}**. Silakan unggah foto bukti kerusakan barang tersebut agar saya bisa memvalidasinya secara instan.`);
-        setStep("upload");
-      } else {
-        addMessage("ai", "Maaf, saya tidak menemukan nomor order tersebut. Pastikan formatnya benar (Contoh: SV-9901).");
-      }
-      setIsTyping(false);
-    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -170,15 +138,9 @@ export default function Home() {
       return;
     }
     
-    if (!currentOrder) {
-      console.log("No currentOrder found, setting mock order for safety");
-      setCurrentOrder({ id: "SV-DEBUG", item: "Produk Percobaan", price: 100000 });
-    }
-
     const file = e.target.files?.[0];
     console.log("File name:", file.name);
 
-    // Tunggu sampai file terbaca sepenuhnya
     const imageData = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = (ev) => resolve(ev.target?.result as string);
@@ -188,7 +150,6 @@ export default function Home() {
 
     addMessage("user", `Mengunggah foto: ${file.name}`, "upload", { fileName: file.name }, imageData);
     
-    // CEK: Jika sudah mode manusia, jangan panggil analisis AI
     if (chatStatus !== "ai") {
       console.log("Human mode active. Skipping AI analysis.");
       if (socketRef.current) {
@@ -200,7 +161,7 @@ export default function Home() {
         });
       }
       addMessage("ai", "Foto Anda telah diterima dan akan segera ditinjau oleh agen manusia kami.");
-      setStep("chat"); // Kembalikan ke mode chat teks
+      setStep("chat");
       return;
     }
 
@@ -209,13 +170,11 @@ export default function Home() {
     addMessage("ai", "Sedang menganalisis bukti kerusakan dengan Gemini...", "analysis");
     
     try {
-      console.log("Sending to /api/analyze...");
-      // Ambil alasan kerusakan dari pesan teks terakhir user
       const lastUserMsg = [...messages].reverse().find(m => m.role === "user" && m.type === "text")?.content || "";
 
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("item", currentOrder?.item || "Produk");
+      formData.append("orderId", currentOrder?.id || "");
       formData.append("reason", lastUserMsg);
 
       const res = await fetch("http://localhost:3001/api/analyze", {

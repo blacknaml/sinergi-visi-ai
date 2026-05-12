@@ -270,7 +270,11 @@ export default function Home() {
         fetch("http://localhost:3001/api/log-refund", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: currentOrder.id, amount: refundAmount })
+          body: JSON.stringify({ 
+            orderId: currentOrder.id, 
+            amount: refundAmount,
+            reason: analysis.description 
+          })
         });
 
         // Simpan Claim Status ke PostgreSQL via WebSocket

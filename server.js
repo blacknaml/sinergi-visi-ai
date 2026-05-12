@@ -146,6 +146,30 @@ async function logEvent(agentId, agentEmail, eventType, description, ip, success
   } catch (e) { console.error("Log error:", e.message); }
 }
 
+// Helper: Laporkan klaim ke MCP Server
+async function reportClaimToMCP(orderNumber, reason) {
+  try {
+    const payload = {
+      order_number: orderNumber,
+      reason: reason || "Disetujui tanpa deskripsi spesifik",
+      type: "claim",
+      status: "pending"
+    };
+    const res = await fetch("http://127.0.0.1:8001/api/mcp/claims", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-MCP-Token": MCP_TOKEN
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    console.log("[MCP] Claim reported:", data);
+  } catch (err) {
+    console.error("[MCP] Error reporting claim:", err);
+  }
+}
+
 // --- Auth Endpoints ---
 app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
@@ -300,6 +324,21 @@ app.patch("/api/claims/:roomId/decision", authenticateAgent, async (req, res) =>
   try {
     await pool.query("UPDATE claims SET decision = $1 WHERE room_id = $2", [decision, roomId]);
     
+    if (decision === 'approved') {
+      const claimRes = await pool.query("SELECT order_id, analysis_result FROM claims WHERE room_id = $1", [roomId]);
+      if (claimRes.rows.length > 0) {
+        const claim = claimRes.rows[0];
+        let reasonStr = "Approved by Human Agent";
+        if (claim.analysis_result) {
+          try {
+            const analysis = typeof claim.analysis_result === 'string' ? JSON.parse(claim.analysis_result) : claim.analysis_result;
+            if (analysis.description) reasonStr = analysis.description;
+          } catch(e) {}
+        }
+        await reportClaimToMCP(claim.order_id, reasonStr);
+      }
+    }
+
     // Kirim pesan otomatis ke chat
     const systemMsg = decision === 'approved' 
       ? `✅ KEPUTUSAN AGEN: Pengajuan Refund DISETUJUI. Dana akan dikembalikan ke metode pembayaran asal dalam 1-3 hari kerja.`
@@ -573,12 +612,17 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
 });
 
 app.post("/api/log-refund", async (req, res) => {
-  const { orderId, amount } = req.body;
+  const { orderId, amount, reason } = req.body;
   try {
     const insertRes = await pool.query(
       "INSERT INTO refunds (order_id, amount, status) VALUES ($1, $2, $3) RETURNING *",
       [orderId, amount, "success"]
     );
+    
+    if (reason) {
+      await reportClaimToMCP(orderId, reason);
+    }
+
     res.json({ success: true, refund: insertRes.rows[0] });
   } catch (err) {
     console.error("Error logging refund:", err);

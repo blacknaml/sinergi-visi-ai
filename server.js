@@ -346,10 +346,16 @@ app.patch("/api/claims/:roomId/decision", authenticateAgent, async (req, res) =>
             if (analysis.description) reasonStr = analysis.description;
           } catch(e) {}
         }
-        if (claim.order_id && claim.order_id.toLowerCase() !== "unknown") {
-          await reportClaimToMCP(claim.order_id, reasonStr);
+        if (claim.order_id) {
+          const lowerId = claim.order_id.toLowerCase().trim();
+          console.log(`[DEBUG] Evaluating MCP report. order_id: '${claim.order_id}', lower: '${lowerId}'`);
+          if (lowerId !== "unknown" && lowerId !== "null" && lowerId !== "") {
+            await reportClaimToMCP(claim.order_id, reasonStr);
+          } else {
+            console.warn(`[WARN] Skipping MCP report for room ${roomId} because order_id is ${claim.order_id}`);
+          }
         } else {
-          console.warn(`[WARN] Skipping MCP report for room ${roomId} because order_id is Unknown.`);
+          console.warn(`[WARN] Skipping MCP report for room ${roomId} because order_id is empty/null.`);
         }
       }
     }

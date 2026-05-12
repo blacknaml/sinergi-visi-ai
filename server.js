@@ -150,19 +150,30 @@ async function logEvent(agentId, agentEmail, eventType, description, ip, success
 async function reportClaimToMCP(orderNumber, reason) {
   try {
     const payload = {
-      order_number: orderNumber,
+      order_number: typeof orderNumber === 'string' ? orderNumber.toUpperCase() : orderNumber,
       reason: reason || "Disetujui tanpa deskripsi spesifik",
       type: "claim",
       status: "pending"
     };
+    
+    console.log("[MCP] Reporting claim:", payload);
+
     const res = await fetch("http://127.0.0.1:8001/api/mcp/claims", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
         "X-MCP-Token": MCP_TOKEN
       },
       body: JSON.stringify(payload)
     });
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[MCP] Request failed with status ${res.status}:`, errorText.slice(0, 500));
+      return;
+    }
+    
     const data = await res.json();
     console.log("[MCP] Claim reported:", data);
   } catch (err) {
@@ -335,7 +346,11 @@ app.patch("/api/claims/:roomId/decision", authenticateAgent, async (req, res) =>
             if (analysis.description) reasonStr = analysis.description;
           } catch(e) {}
         }
-        await reportClaimToMCP(claim.order_id, reasonStr);
+        if (claim.order_id && claim.order_id.toLowerCase() !== "unknown") {
+          await reportClaimToMCP(claim.order_id, reasonStr);
+        } else {
+          console.warn(`[WARN] Skipping MCP report for room ${roomId} because order_id is Unknown.`);
+        }
       }
     }
 
@@ -432,7 +447,8 @@ ALUR KOMPLAIN WAJIB:
 1. Minta Nomor Order (Format: ORD-XXXXXX).
 2. CEK: Jika Nomor Order valid, konfirmasikan item-item yang ada di pesanan tersebut.
 3. JANGAN minta foto sebelum Nomor Order tervalidasi.
-4. Jika Nomor Order Valid, baru minta customer upload foto bukti.
+4. Jika Nomor Order Valid, baru minta customer menginfokan item yang mana yang rusak dan alasannya.
+5. Jika item dan alasan sudah diinfokan oleh customer, barulah minta customer upload foto bukti.
 5. Gunakan kode [INTENT:REQUEST_PHOTO] jika data order sudah benar dan siap menerima foto.
 `;
 

@@ -97,6 +97,13 @@ pool.connect(async (err, client, release) => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    
+    // Migrasi aman untuk menambah kolom jika tabel claims sudah ada dari versi sebelumnya
+    await client.query(`
+      ALTER TABLE claims ADD COLUMN IF NOT EXISTS decision VARCHAR(50) DEFAULT 'pending';
+      ALTER TABLE claims ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
+    `);
+
     console.log("Database Tables Verified/Created.");
 
     // Seed default admin jika tabel agents masih kosong
@@ -476,7 +483,18 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       return res.status(404).json({ error: "Data item pesanan tidak ditemukan." });
     }
 
-    for (const item of items) {
+    const reasonLower = customerReason.toLowerCase();
+    let targetItems = items.filter(item => {
+      const productNameLower = item.product.name.toLowerCase();
+      const words = productNameLower.split(/\s+/).filter(w => w.length > 2);
+      return reasonLower.includes(productNameLower) || words.some(w => reasonLower.includes(w));
+    });
+
+    if (targetItems.length === 0) {
+      targetItems = items;
+    }
+
+    for (const item of targetItems) {
       console.log("[DEBUG] /api/analyze - image:", JSON.stringify(item.product));
       const b64 = await getImageAsBase64(`${ECOM_STORAGE_BASE}${item.product.image_path}`);
       if (b64) {
@@ -499,7 +517,8 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       ALASAN PELANGGAN: "${customerReason}"
 
       LANGKAH ANALISIS:
-      1. Identifikasi apakah barang di FOTO PELANGGAN ada di dalam daftar PRODUK ASLI.
+      1. Identifikasi apakah barang di FOTO PELANGGAN ada di dalam daftar PRODUK ASLI gunakan nama produk yang sesuai dengan item yang rusak. 
+         PRODUK ASLI adalah gambar sebelum gambar terakhir, dan sesuaikan dengan nama produk yang rusak.
       2. Berikan isProductMatch: true jika cocok dengan salah satu produk dalam order ini.
       3. Periksa apakah ada kerusakan fisik di FOTO PELANGGAN yang sesuai dengan ALASAN PELANGGAN.
       4. Jika alasan "Pecah" tapi di foto cuma "Lecet", maka isDamageMatch: false.
@@ -537,8 +556,10 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
         analysisResult = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
         if (analysisResult) break;
       } catch (vErr) {
-        console.error(`[VISION ERROR] ${vModelName}:`, vErr.status, vErr.message?.slice(0, 120));
-        if (vErr.status === 429 || vErr.status === 404) continue;
+        if (vErr.status === 429 || vErr.status === 404 || vErr.status === 503) {
+          console.warn(`[VISION WARN] ${vModelName} unavailable (${vErr.status}). Trying next...`);
+          continue;
+        }
         break;
       }
     }

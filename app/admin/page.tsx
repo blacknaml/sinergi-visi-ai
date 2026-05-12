@@ -273,6 +273,7 @@ export default function AdminDashboard() {
         reason: payload.claimData?.reason || payload.content,
         analysis: payload.claimData?.analysis || { damageType: "Pending", confidence: 0 },
         status: "pending",
+        decision: "pending",
         imageUrl: payload.claimData?.imageUrl,
         messages: []
       };
@@ -420,9 +421,13 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         setClaims(prev => prev.map(c => c.id === claimId ? { ...c, decision } : c));
+      } else {
+        const errorData = await res.json();
+        alert("Gagal memproses keputusan: " + (errorData.error || "Unknown error"));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Decision error:", err);
+      alert("Terjadi kesalahan jaringan saat memproses keputusan.");
     }
   };
 
@@ -593,16 +598,16 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Decision Panel (Quick Action) */}
-              {selectedClaim.status === "active" && selectedClaim.decision === "pending" && (
-                <div className="mx-6 mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between">
+              {/* Decision Panel (Quick Action) - Selalu tampil jika belum ada keputusan */}
+              {selectedClaim.decision === "pending" && (
+                <div className="mx-6 mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-500/5">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
                       <Clock className="w-5 h-5 text-amber-500" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-amber-200">Keputusan Akhir Dibutuhkan</p>
-                      <p className="text-xs text-amber-200/60">Tentukan apakah klaim ini layak mendapatkan refund atau tidak.</p>
+                      <p className="text-sm font-bold text-amber-200">Menunggu Inspeksi Agen</p>
+                      <p className="text-xs text-amber-200/60 italic">Silakan tinjau bukti foto dan putuskan refund.</p>
                     </div>
                   </div>
                   <div className="flex gap-2">

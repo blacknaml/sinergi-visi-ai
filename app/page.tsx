@@ -101,9 +101,7 @@ export default function Home() {
             // orderId valid — tampilkan form upload
             setCurrentOrder((prev: any) => ({ ...prev, id: orderMatch }));
             setStep("upload");
-            if (socketRef.current) {
-              socketRef.current.emit("join_room", { roomId: orderMatch });
-            }
+            // Jangan join room baru di sini, tetap gunakan sessionId
           } else {
             // orderId tidak ditemukan — jangan tampilkan form upload, minta customer konfirmasi
             console.warn("[WARN] intent=request_photo tapi orderId tidak ditemukan");
@@ -157,7 +155,8 @@ export default function Home() {
     if (!inputValue.trim() || !socketRef.current) return;
 
     const userText = inputValue.trim();
-    const roomId = currentOrder ? currentOrder.id : sessionId;
+    // SELALU gunakan sessionId agar chat tidak terpecah/reset
+    const roomId = sessionId;
 
     socketRef.current.emit("send_message", {
       roomId,

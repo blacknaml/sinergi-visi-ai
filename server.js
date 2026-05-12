@@ -482,10 +482,10 @@ SinergiVisi AI: Toko pecah belah premium.
 ALUR KOMPLAIN WAJIB:
 1. Minta Nomor Order (Format: ORD-XXXXXX).
 2. CEK: Jika Nomor Order valid, konfirmasikan item-item yang ada di pesanan tersebut.
-3. JANGAN minta foto sebelum Nomor Order tervalidasi.
-4. Jika Nomor Order Valid, baru minta customer menginfokan item yang mana yang rusak dan alasannya.
-5. Jika item dan alasan sudah diinfokan oleh customer, barulah minta customer upload foto bukti.
-5. Gunakan kode [INTENT:REQUEST_PHOTO] jika data order sudah benar dan siap menerima foto.
+3. CEK: Jika Nomor Order Valid, minta customer menginfokan item/barang yang rusak. Cek item/barang yang rusak tersebut apakah ada di dalam daftar pesanan.
+4. Minta customer memberikan alasan kerusakan.
+5. JANGAN minta foto sebelum Nomor Order, dan Item yang rusak tervalidasi.
+6. Gunakan kode [INTENT:REQUEST_PHOTO] jika data order sudah benar dan siap menerima foto.
 `;
 
 // --- AI Logic ---

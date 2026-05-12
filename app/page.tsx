@@ -41,6 +41,7 @@ export default function Home() {
   const [chatStatus, setChatStatus] = useState<"ai" | "waiting" | "human">("ai");
   const [isTyping, setIsTyping] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<any>(null);
+  const [orderItems, setOrderItems] = useState<{name: string, price: number}[]>([]);
   const [lastImage, setLastImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -91,6 +92,10 @@ export default function Home() {
       
       if (msg.role === "ai") {
         setIsTyping(false);
+        // Jika message membawa data item pesanan, tampilkan tombol pilihan
+        if (msg.orderItems && Array.isArray(msg.orderItems) && msg.orderItems.length > 0) {
+          setOrderItems(msg.orderItems);
+        }
         // Gunakan field 'intent' yang dikirim server (tag sudah dihapus dari content)
         if (msg.intent === "request_photo") {
           // Coba ambil orderId dari metadata message atau dari history pesan sebelumnya
@@ -151,11 +156,10 @@ export default function Home() {
     setMessages((prev) => [...prev, newMessage]);
   };
 
-  const handleSend = async () => {
-    if (!inputValue.trim() || !socketRef.current) return;
+  const handleSend = async (textOverride?: string) => {
+    const userText = (textOverride ?? inputValue).trim();
+    if (!userText || !socketRef.current) return;
 
-    const userText = inputValue.trim();
-    // SELALU gunakan sessionId agar chat tidak terpecah/reset
     const roomId = sessionId;
 
     socketRef.current.emit("send_message", {
@@ -164,7 +168,13 @@ export default function Home() {
       role: "user"
     });
 
+    // Jika item dipilih via tombol, bersihkan daftar pilihan & input
+    if (textOverride) {
+      setOrderItems([]);
+    }
+
     setInputValue("");
+    setIsTyping(true);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -452,8 +462,37 @@ export default function Home() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 border-t border-white/10 bg-black/20">
+          {/* Item Selection Chips */}
+          <AnimatePresence>
+          {orderItems.length > 0 && step !== "upload" && step !== "analyzing" && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="px-4 pt-3 pb-2 border-t border-white/5"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] text-white/40 uppercase tracking-widest">Pilih item yang bermasalah:</p>
+                <button onClick={() => setOrderItems([])} className="text-[10px] text-white/20 hover:text-white/50 transition-colors">✕ tutup</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {orderItems.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSend(item.name)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/40 rounded-full transition-all duration-200 text-violet-300 hover:text-white hover:border-violet-400/60 group"
+                  >
+                    <Package className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                    {item.name}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+          </AnimatePresence>
+
+          {/* Input Area */}
+          <div className="p-4 border-t border-white/10 bg-black/20">
           <form 
             onSubmit={(e) => {
               e.preventDefault();

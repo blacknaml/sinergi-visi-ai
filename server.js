@@ -788,13 +788,29 @@ io.on("connection", (socket) => {
         if (aiContent.includes("[INTENT:REQUEST_PHOTO]")) intent = "request_photo";
 
         const orderIdMatch = aiContent.match(/ORD-[A-Z0-9]+/i) || content.match(/ORD-[A-Z0-9]+/i);
-        const extractedOrderId = orderIdMatch ? orderIdMatch[0] : null;
+        const extractedOrderId = orderIdMatch ? orderIdMatch[0].toUpperCase() : null;
+
+        // Jika order ID terdeteksi, ambil item-item pesanan untuk dikirim ke frontend
+        let orderItems = null;
+        if (extractedOrderId) {
+          try {
+            const orderData = await getOrderDetails(extractedOrderId);
+            if (orderData && Array.isArray(orderData.items) && orderData.items.length > 0) {
+              orderItems = orderData.items.map(i => ({
+                name: i.product.name,
+                price: i.price
+              }));
+            }
+          } catch (oErr) {
+            console.warn("[WARN] Could not fetch order items for button rendering:", oErr.message);
+          }
+        }
 
         const aiInsert = await pool.query(
           "INSERT INTO messages (room_id, role, content) VALUES ($1, $2, $3) RETURNING *",
           [roomId, "ai", cleanContent]
         );
-        const aiMsg = { ...aiInsert.rows[0], intent, orderId: extractedOrderId };
+        const aiMsg = { ...aiInsert.rows[0], intent, orderId: extractedOrderId, orderItems };
         io.to(roomId).emit("new_message", aiMsg);
       }
     } catch (err) {

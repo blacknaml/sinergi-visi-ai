@@ -695,7 +695,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Decision Panel (Quick Action) - Selalu tampil jika belum ada keputusan */}
-              {selectedClaim.status === "pending" && (
+              {selectedClaim.status === "pending" || selectedClaim.status === "active" && (
                 <div className="mx-6 mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-500/5">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">

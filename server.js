@@ -152,8 +152,8 @@ async function reportClaimToMCP(orderNumber, reason) {
     const payload = {
       order_number: typeof orderNumber === 'string' ? orderNumber.toUpperCase() : orderNumber,
       reason: reason || "Disetujui tanpa deskripsi spesifik",
-      type: "claim",
-      status: "pending"
+      type: "refund",
+      status: "completed"
     };
     
     console.log("[MCP] Reporting claim:", payload);
@@ -373,6 +373,33 @@ app.patch("/api/claims/:roomId/decision", authenticateAgent, async (req, res) =>
   } catch (err) {
     console.error("Error updating decision:", err);
     res.status(500).json({ error: "Gagal menyimpan keputusan." });
+  }
+});
+
+app.patch("/api/claims/:roomId/order", authenticateAgent, async (req, res) => {
+  const { roomId } = req.params;
+  const { orderId } = req.body;
+  if (!orderId) return res.status(400).json({ error: "Order ID diperlukan" });
+
+  try {
+    // Validasi ke MCP Server
+    const mcpRes = await fetch(`${ECOM_API_BASE}/orders/${orderId}`, {
+      headers: { "X-MCP-Token": MCP_TOKEN, "Accept": "application/json" }
+    });
+    
+    if (!mcpRes.ok) {
+      return res.status(404).json({ error: "Order tidak ditemukan di eCommerce." });
+    }
+    
+    await pool.query("UPDATE claims SET order_id = $1 WHERE room_id = $2", [orderId.toUpperCase(), roomId]);
+    
+    // Broadcast update agar dashboard admin lain ikut berubah
+    io.emit("claim_order_updated", { roomId, orderId: orderId.toUpperCase() });
+    
+    res.json({ success: true, orderId: orderId.toUpperCase() });
+  } catch (err) {
+    console.error("Error updating order ID:", err);
+    res.status(500).json({ error: "Gagal menyimpan Order ID" });
   }
 });
 

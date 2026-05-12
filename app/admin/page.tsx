@@ -19,7 +19,10 @@ import {
   Loader2,
   Archive,
   ArchiveRestore,
-  Inbox
+  Inbox,
+  Pencil,
+  Check,
+  X
 } from "lucide-react";
 import { io } from "socket.io-client";
 import AgentsPage from "./components/AgentsPage";
@@ -201,6 +204,9 @@ export default function AdminDashboard() {
   const [agentMessage, setAgentMessage] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [newOrderIdInput, setNewOrderIdInput] = useState("");
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const socketRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -331,6 +337,10 @@ export default function AdminDashboard() {
       }));
     });
 
+    socket.on("claim_order_updated", (data: { roomId: string, orderId: string }) => {
+      setClaims(prev => prev.map(c => c.id === data.roomId ? { ...c, orderId: data.orderId } : c));
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -408,6 +418,31 @@ export default function AdminDashboard() {
       console.error("Archive error:", err);
     } finally {
       setIsArchiving(false);
+    }
+  };
+
+  const handleUpdateOrderId = async (claimId: string) => {
+    if (!newOrderIdInput.trim() || !authToken) return;
+    setIsUpdatingOrder(true);
+    try {
+      const res = await fetch(`http://localhost:3001/api/claims/${claimId}/order`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ orderId: newOrderIdInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEditingOrderId(null);
+      } else {
+        alert(data.error || "Gagal mengupdate Nomor Order");
+      }
+    } catch (err) {
+      alert("Terjadi kesalahan jaringan.");
+    } finally {
+      setIsUpdatingOrder(false);
     }
   };
 
@@ -565,7 +600,50 @@ export default function AdminDashboard() {
               <div className="p-6 border-b border-white/5 flex justify-between items-center">
                 <div>
                   <h2 className="text-xl font-bold">{selectedClaim.item}</h2>
-                  <p className="text-xs text-white/40">Order ID: {selectedClaim.orderId} • Klaim Terdeteksi Gemini</p>
+                  <div className="text-xs text-white/40 flex items-center gap-2 mt-1">
+                    <span>Order ID:</span>
+                    {editingOrderId === selectedClaim.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newOrderIdInput}
+                          onChange={(e) => setNewOrderIdInput(e.target.value)}
+                          placeholder="ORD-XXXXXX"
+                          className="bg-black/50 border border-white/20 rounded px-2 py-1 text-white outline-none"
+                        />
+                        <button 
+                          onClick={() => handleUpdateOrderId(selectedClaim.id)}
+                          disabled={isUpdatingOrder}
+                          className="p-1 bg-cyan-600 hover:bg-cyan-500 rounded text-white disabled:opacity-50"
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                        <button 
+                          onClick={() => setEditingOrderId(null)}
+                          className="p-1 bg-red-600/50 hover:bg-red-500/50 rounded text-white"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="font-mono bg-white/5 px-2 py-0.5 rounded">{selectedClaim.orderId}</span>
+                        {(selectedClaim.orderId.toLowerCase() === "unknown" || selectedClaim.orderId === "") && (
+                          <button 
+                            onClick={() => {
+                              setEditingOrderId(selectedClaim.id);
+                              setNewOrderIdInput("");
+                            }}
+                            className="text-cyan-400 hover:text-cyan-300 transition-colors"
+                            title="Update Nomor Order"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <span className="ml-2">• Klaim Terdeteksi Gemini</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   {selectedClaim.status === "pending" && (

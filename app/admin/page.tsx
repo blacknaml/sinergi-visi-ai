@@ -35,7 +35,7 @@ type Claim = {
   price: number;
   reason: string;
   analysis: any;
-  status: "pending" | "active" | "completed";
+  status: "pending" | "active" | "complete";
   decision?: "pending" | "approved" | "rejected";
   messages: { role: "user" | "agent" | "ai"; content: string; id: string | number; imageUrl?: string }[];
   imageUrl?: string;
@@ -297,7 +297,7 @@ export default function AdminDashboard() {
         price: parseFloat(c.price) || 0,
         reason: c.analysis?.reason || "Menunggu review",
         analysis: c.analysis || { damageType: "Pending", confidence: 0 },
-        status: c.status === "pending" ? "pending" : "active",
+        status: (c.status as any) || "active",
         decision: c.decision || "pending",
         messages: []
       }));
@@ -341,6 +341,13 @@ export default function AdminDashboard() {
       setClaims(prev => prev.map(c => c.id === data.roomId ? { ...c, orderId: data.orderId } : c));
     });
 
+    socket.on("claim_decision_sync", (data: { roomId: string, decision: string, status: string }) => {
+      setClaims(prev => prev.map(c => c.id === data.roomId ? { ...c, decision: data.decision as any, status: data.status as any } : c));
+      if (selectedClaimId === data.roomId) {
+        setSelectedClaimId(data.roomId); // Force re-render of workspace header if needed
+      }
+    });
+
     return () => {
       socket.disconnect();
     };
@@ -362,7 +369,7 @@ export default function AdminDashboard() {
           price: parseFloat(c.price) || 0,
           reason: c.analysis?.reason || "Diarsipkan",
           analysis: c.analysis || { damageType: "-", confidence: 0 },
-          status: "completed" as const,
+          status: "complete" as const,
           decision: c.decision || "pending",
           messages: []
         })));
@@ -455,7 +462,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ decision })
       });
       if (res.ok) {
-        setClaims(prev => prev.map(c => c.id === claimId ? { ...c, decision } : c));
+        setClaims(prev => prev.map(c => c.id === claimId ? { ...c, decision, status: 'completed' as any } : c));
       } else {
         const errorData = await res.json();
         alert("Gagal memproses keputusan: " + (errorData.error || "Unknown error"));
@@ -479,6 +486,8 @@ export default function AdminDashboard() {
   if (!authToken) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
+
+  console.log(selectedClaim);
 
   // === DASHBOARD ===
   return (
@@ -550,8 +559,16 @@ export default function AdminDashboard() {
               {!showArchived && claims.length > 0 && (
                 <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">{claims.length}</span>
               )}
-              <button
-                onClick={() => { setShowArchived(v => !v); setClaims([]); setSelectedClaimId(null); }}
+                            <button
+                onClick={() => { 
+                  const nextValue = !showArchived;
+                  setShowArchived(nextValue); 
+                  setClaims([]); 
+                  setSelectedClaimId(null);
+                  if (!nextValue && socketRef.current) {
+                    socketRef.current.emit("join_admin");
+                  }
+                }}
                 title={showArchived ? "Lihat Aktif" : "Lihat Arsip"}
                 className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
               >
@@ -584,6 +601,7 @@ export default function AdminDashboard() {
                   </span>
                   {claim.status === "pending" && <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
                   {claim.status === "active" && <span className="w-2 h-2 bg-cyan-400 rounded-full" />}
+                  {claim.status === "complete" && <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />}
                 </div>
                 <h3 className="text-sm font-bold truncate">{claim.item}</h3>
                 <p className="text-[10px] text-white/40 mt-1">Rp {Number(claim.price).toLocaleString('id-ID')}</p>
@@ -677,7 +695,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Decision Panel (Quick Action) - Selalu tampil jika belum ada keputusan */}
-              {selectedClaim.decision === "pending" && (
+              {selectedClaim.status === "pending" && (
                 <div className="mx-6 mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-500/5">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">

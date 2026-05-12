@@ -333,7 +333,10 @@ app.patch("/api/claims/:roomId/decision", authenticateAgent, async (req, res) =>
   }
 
   try {
-    await pool.query("UPDATE claims SET decision = $1 WHERE room_id = $2", [decision, roomId]);
+    await pool.query("UPDATE claims SET decision = $1, status = 'complete' WHERE room_id = $2", [decision, roomId]);
+    
+    // Broadcast status update
+    io.emit("claim_decision_sync", { roomId, decision, status: 'complete' });
     
     if (decision === 'approved') {
       const claimRes = await pool.query("SELECT order_id, analysis_result FROM claims WHERE room_id = $1", [roomId]);
@@ -848,12 +851,14 @@ io.on("connection", (socket) => {
       const res = await pool.query(
         "SELECT * FROM claims WHERE archived = false OR archived IS NULL ORDER BY created_at DESC"
       );
+      console.log(`[DEBUG] Loading ${res.rows.length} claims for admin. Sample status: ${res.rows[0]?.status}, decision: ${res.rows[0]?.decision}`);
       socket.emit("load_claims", res.rows.map(c => ({
         id: c.room_id,
         orderId: c.order_id,
         item: c.item_name,
         price: c.price,
         status: c.status,
+        decision: c.decision,
         mode: c.mode,
         analysis: c.analysis_result
       })));

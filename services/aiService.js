@@ -34,7 +34,7 @@ async function getImageAsBase64(url) {
  * Get AI Chat response from Gemini
  */
 async function getAiResponse(userMessage, history) {
-  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
+  const models = ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite", "gemini-3.1-flash"];
 
   // Coba cari Nomor Order di pesan terakhir (Format ORD-...)
   const orderMatch = userMessage.match(/ORD-[A-Z0-9]+/i);

@@ -7,10 +7,13 @@ const { genAI, getImageAsBase64 } = require("../services/aiService");
  * List all active/non-archived claims
  */
 const getClaims = async (req, res) => {
+  const isArchived = req.query.archived === 'true';
   try {
-    const result = await pool.query(
-      "SELECT * FROM claims WHERE archived = false OR archived IS NULL ORDER BY created_at DESC"
-    );
+    const query = isArchived 
+      ? "SELECT * FROM claims WHERE archived = true ORDER BY created_at DESC"
+      : "SELECT * FROM claims WHERE archived = false OR archived IS NULL ORDER BY created_at DESC";
+      
+    const result = await pool.query(query);
     res.json(result.rows.map(c => ({
       id: c.room_id,
       orderId: c.order_id,
@@ -170,13 +173,27 @@ const analyzePhoto = async (req, res) => {
       return res.status(404).json({ error: "Data item pesanan tidak ditemukan." });
     }
 
+    // Filter item yang akan dibandingkan berdasarkan alasan atau intent
     const reasonLower = customerReason.toLowerCase();
-    let targetItems = items.filter(item => {
-      const productNameLower = item.product.name.toLowerCase();
-      const words = productNameLower.split(/\s+/).filter(w => w.length > 2);
-      return reasonLower.includes(productNameLower) || words.some(w => reasonLower.includes(w));
-    });
+    let targetItems = items;
 
+    // Jika alasan mengandung intent khusus, filter secara ketat
+    if (customerReason.includes("[INTENT:REQUEST_CLAIM_ITEM]")) {
+      const selectedItem = customerReason.replace("[INTENT:REQUEST_CLAIM_ITEM]", "").trim().toLowerCase();
+      targetItems = items.filter(item => {
+        const productNameLower = item.product.name.toLowerCase();
+        return selectedItem.includes(productNameLower) || productNameLower.includes(selectedItem);
+      });
+    } else {
+      // Fuzzy matching biasa
+      targetItems = items.filter(item => {
+        const productNameLower = item.product.name.toLowerCase();
+        const words = productNameLower.split(/\s+/).filter(w => w.length > 2);
+        return reasonLower.includes(productNameLower) || words.some(w => reasonLower.includes(w));
+      });
+    }
+
+    // Jika filter menghasilkan kosong, gunakan semua item sebagai cadangan
     if (targetItems.length === 0) targetItems = items;
 
     for (const item of targetItems) {
@@ -207,7 +224,7 @@ const analyzePhoto = async (req, res) => {
       }
     `;
 
-    const visionModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
+    const visionModels = ["gemini-3.1-flash-lite", "gemini-3.1-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
     let analysisResult = null;
 
     const imageParts = originalProducts.map(p => ({
@@ -228,7 +245,7 @@ const analyzePhoto = async (req, res) => {
       } catch (vErr) { continue; }
     }
 
-    if (!analysisResult) throw new Error("Vision analysis failed");
+    if (!analysisResult) throw new Error("Gagal menganalisa foto.");
     res.json({ ...analysisResult, totalPrice: orderData.total_price });
   } catch (error) {
     res.status(500).json({ error: error.message });

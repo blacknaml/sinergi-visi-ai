@@ -479,7 +479,7 @@ export default function Home() {
                 {orderItems.map((item, idx) => (
                   <button
                     key={idx}
-                    onClick={() => handleSend(item.name)}
+                    onClick={() => handleSend(`[INTENT:REQUEST_CLAIM_ITEM] ${item.name}`)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/40 rounded-full transition-all duration-200 text-violet-300 hover:text-white hover:border-violet-400/60 group"
                   >
                     <Package className="w-3 h-3 opacity-60 group-hover:opacity-100" />

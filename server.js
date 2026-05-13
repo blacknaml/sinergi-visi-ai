@@ -31,7 +31,6 @@ const io = new Server(httpServer, {
 const upload = multer({ storage: multer.memoryStorage() });
 
 // --- API ROUTES ---
-
 // Auth
 app.post("/api/auth/login", authController.login);
 app.get("/api/auth/me", authenticateAgent, authController.getMe);

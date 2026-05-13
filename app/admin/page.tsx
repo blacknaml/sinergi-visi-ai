@@ -311,7 +311,7 @@ export default function AdminDashboard() {
         analysis: c.analysis || { damageType: "Pending", confidence: 0 },
         status: (c.status as any) || "active",
         decision: c.decision || "pending",
-        imageUrl: c.image_url,
+        imageUrl: c.imageUrl,
         archived: c.archived,
         messages: []
       }));
@@ -376,17 +376,24 @@ export default function AdminDashboard() {
       .then(r => r.json())
       .then(data => {
         if (!Array.isArray(data)) return;
-        setClaims(data.map((c: any) => ({
+        const archivedMapped = data.map((c: any) => ({
           id: c.id,
           orderId: c.orderId,
           item: c.item || `Order ${c.orderId}`,
           price: parseFloat(c.price) || 0,
           reason: c.analysis?.reason || "Diarsipkan",
           analysis: c.analysis || { damageType: "-", confidence: 0 },
-          status: "complete" as const,
+          status: c.status || "complete",
           decision: c.decision || "pending",
+          imageUrl: c.imageUrl,
+          archived: true,
           messages: []
-        })));
+        }));
+        
+        setClaims(prev => {
+          const newOnes = archivedMapped.filter(ac => !prev.some(pc => pc.id === ac.id));
+          return [...prev, ...newOnes];
+        });
       })
       .catch(console.error);
   }, [showArchived, authToken]);
@@ -454,8 +461,8 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
         body: JSON.stringify({ archived: archive })
       });
-      // Hapus dari list yang sedang ditampilkan
-      setClaims(prev => prev.filter(c => c.id !== claimId));
+      // Perbarui status archived di state, jangan dihapus agar bisa pindah antar list
+      setClaims(prev => prev.map(c => c.id === claimId ? { ...c, archived: archive } : c));
       setSelectedClaimId(null);
     } catch (err) {
       console.error("Archive error:", err);
@@ -621,7 +628,7 @@ export default function AdminDashboard() {
               </div>
             )}
             {claims
-              .filter(c => showArchived ? (c.status === "complete" || c.archived) : (c.status !== "complete" && !c.archived))
+              .filter(c => showArchived ? c.archived : !c.archived)
               .map(claim => (
               <motion.div
                 key={claim.id}

@@ -23,6 +23,7 @@ const getClaims = async (req, res) => {
       decision: c.decision,
       mode: c.mode,
       archived: c.archived,
+      imageUrl: c.image_url,
       analysis: c.analysis_result,
       created_at: c.created_at
     })));

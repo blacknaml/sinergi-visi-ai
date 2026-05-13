@@ -100,7 +100,7 @@ AI:`;
         console.error("[FATAL] API Key Gemini tidak valid!");
         break;
       }
-      if (err.status === 404 || err.status === 429 || errMsg.includes("quota")) {
+      if (err.status === 404 || err.status === 429 || err.status === 503 || errMsg.includes("quota")) {
         console.warn(`[WARN] ${modelName} unavailable (${err.status}). Trying next...`);
         continue;
       }

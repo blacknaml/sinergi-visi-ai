@@ -275,6 +275,8 @@ export default function AdminDashboard() {
     socket.emit("join_admin");
 
     socket.on("new_claim_alert", (payload: any) => {
+      const isApproved = payload.claimData?.status === "approved" || payload.claimData?.status === "complete";
+      
       const newClaim: Claim = {
         id: payload.id,
         orderId: payload.orderId,
@@ -282,13 +284,18 @@ export default function AdminDashboard() {
         price: payload.claimData?.price || 0,
         reason: payload.claimData?.reason || payload.content,
         analysis: payload.claimData?.analysis || { damageType: "Pending", confidence: 0 },
-        status: "pending",
-        decision: "pending",
+        status: isApproved ? "complete" : "pending",
+        decision: isApproved ? "approved" : "pending",
         imageUrl: payload.claimData?.imageUrl,
         messages: []
       };
+
       setClaims(prev => {
-        if (prev.some(c => c.id === payload.id)) return prev;
+        const exists = prev.find(c => c.id === payload.id);
+        if (exists) {
+          // Update existing claim with new status/decision
+          return prev.map(c => c.id === payload.id ? { ...c, ...newClaim, messages: c.messages } : c);
+        }
         return [...prev, newClaim];
       });
     });
@@ -303,6 +310,7 @@ export default function AdminDashboard() {
         analysis: c.analysis || { damageType: "Pending", confidence: 0 },
         status: (c.status as any) || "active",
         decision: c.decision || "pending",
+        imageUrl: c.image_url,
         messages: []
       }));
       setClaims(mapped);

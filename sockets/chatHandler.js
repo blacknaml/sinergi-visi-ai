@@ -143,10 +143,10 @@ module.exports = (io, socket) => {
       const archived = claimData.status === "approved";
 
       await pool.query(
-        `INSERT INTO claims (room_id, order_id, item_name, price, status, decision, mode, analysis_result, archived) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+        `INSERT INTO claims (room_id, order_id, item_name, price, status, decision, mode, analysis_result, archived, image_url) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
          ON CONFLICT (room_id) DO UPDATE SET 
-         status = $5, decision = $6, mode = $7, analysis_result = $8, archived = $9`,
+         status = $5, decision = $6, mode = $7, analysis_result = $8, archived = $9, image_url = $10`,
         [
           roomId, 
           claimData.orderId, 
@@ -156,7 +156,8 @@ module.exports = (io, socket) => {
           decision, 
           "human", 
           JSON.stringify(claimData.analysis),
-          archived
+          archived,
+          claimData.imageUrl
         ]
       );
       

@@ -215,7 +215,7 @@ const analyzePhoto = async (req, res) => {
     const prompt = `
       Anda adalah pakar inspeksi kualitas SinergiVisi AI.
       Tugas Anda adalah membandingkan FOTO PELANGGAN (gambar terakhir) dengan FOTO PRODUK ASLI dari katalog kami (gambar-gambar sebelumnya).
-      ALASAN PELANGGAN: "${customerReason}"
+      ALASAN PELANGGAN: "${customerReason || "Pelanggan melaporkan kerusakan pada barang."}" (Abaikan kode [INTENT:...] jika ada, fokus pada deskripsi kerusakan).
       LANGKAH ANALISIS:
       1. Identifikasi apakah barang di FOTO PELANGGAN ada di dalam daftar PRODUK ASLI gunakan nama produk yang sesuai dengan item yang rusak. 
       2. Berikan isProductMatch: true jika cocok dengan salah satu produk dalam order ini.

@@ -869,7 +869,7 @@ export default function AdminDashboard() {
                               {msg.imageUrl && (
                                 <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-h-48 w-auto object-contain cursor-zoom-in" />
                               )}
-                              {msg.content}
+                              {msg.content.replace(/\[INTENT:[A-Z_]+\]/g, '').trim()}
                             </div>
                           </div>
                         ))}

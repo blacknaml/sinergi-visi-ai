@@ -218,7 +218,9 @@ export default function Home() {
     addMessage("ai", "Sedang menganalisis bukti kerusakan dengan Gemini...", "analysis");
     
     try {
-      const lastUserMsg = [...messages].reverse().find(m => m.role === "user" && m.type === "text")?.content || "";
+      // Ambil alasan dari beberapa pesan user terakhir agar konteksnya lengkap (misal: "Pecah" + "Barang ini")
+      const userTextMsgs = messages.filter(m => m.role === "user" && m.type === "text");
+      const lastUserMsg = userTextMsgs.slice(-3).map(m => m.content).join(" ");
 
       const formData = new FormData();
       formData.append("file", file);
@@ -404,7 +406,11 @@ export default function Home() {
                   msg.role === "agent" ? "chat-bubble-agent" : 
                   "chat-bubble-ai"
                 }`}>
-                  {(!msg.type || msg.type === "text") && <p className="text-sm leading-relaxed">{msg.content}</p>}
+                  {(!msg.type || msg.type === "text") && (
+                    <p className="text-sm leading-relaxed">
+                      {msg.content.replace(/\[INTENT:[A-Z_]+\]/g, '').trim()}
+                    </p>
+                  )}
                   
                   {msg.type === "upload" && (
                     <div className="space-y-2">

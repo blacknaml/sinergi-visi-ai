@@ -304,7 +304,8 @@ export default function Home() {
               price: refundAmount,
               status: "approved",
               analysis: analysis,
-              reason: "AI Auto-Approved"
+              reason: "AI Auto-Approved",
+              imageUrl: analysis.imageUrl || imageData
             }
           });
         }
@@ -323,7 +324,7 @@ export default function Home() {
               status: "pending",
               analysis: analysis,
               reason: decision.reason,
-              imageUrl: imageData
+              imageUrl: analysis.imageUrl || imageData
             }
           });
         }

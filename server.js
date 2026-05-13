@@ -28,7 +28,19 @@ const io = new Server(httpServer, {
   maxHttpBufferSize: 10 * 1024 * 1024 // 10MB for base64 images
 });
 
-const upload = multer({ storage: multer.memoryStorage() });
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, uniqueSuffix + '-' + file.originalname)
+  }
+})
+const upload = multer({ storage: storage });
+
+// Servir file statis dari folder uploads
+app.use("/uploads", express.static("uploads"));
 
 // --- API ROUTES ---
 // Auth

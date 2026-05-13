@@ -1,4 +1,5 @@
 const pool = require("../lib/db");
+const fs = require("fs");
 const { logEvent } = require("../lib/logger");
 const { reportClaimToMCP, getOrderDetails, ECOM_STORAGE_BASE, ECOM_API_BASE, MCP_TOKEN } = require("../services/mcpService");
 const { genAI, getImageAsBase64 } = require("../services/aiService");
@@ -211,7 +212,8 @@ const analyzePhoto = async (req, res) => {
       }
     }
 
-    const customerPhotoB64 = file.buffer.toString("base64");
+    const customerPhotoB64 = fs.readFileSync(file.path).toString("base64");
+    const publicImageUrl = `http://localhost:3001/uploads/${file.filename}`;
     
     const prompt = `
     # ROLE
@@ -270,7 +272,7 @@ const analyzePhoto = async (req, res) => {
     if (!analysisResult) throw new Error("Gagal menganalisa foto.");
 
     console.log('analysisResult', analysisResult);
-    res.json({ ...analysisResult, totalPrice: orderData.total_price });
+    res.json({ ...analysisResult, totalPrice: orderData.total_price, imageUrl: publicImageUrl });
   } catch (error) {
     console.error('error', error);
     res.status(500).json({ error: error.message });

@@ -1,229 +1,63 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 import { 
   Users, 
-  MessageSquare, 
   ClipboardCheck, 
   LayoutDashboard,
   ShieldAlert,
-  Send,
   CheckCircle,
   Clock,
   AlertTriangle,
   LogOut,
-  Eye,
-  EyeOff,
   ShieldCheck,
-  Loader2,
-  Archive,
-  ArchiveRestore,
-  Inbox,
-  Pencil,
-  Check,
-  X,
-  Package,
-  ShoppingCart
+  Loader2
 } from "lucide-react";
-import { io } from "socket.io-client";
+
+import LoginPage from "./components/LoginPage";
+import ClaimList from "./components/ClaimList";
+import WorkspaceHeader from "./components/WorkspaceHeader";
+import ClaimDetails from "./components/ClaimDetails";
+import ChatPanel from "./components/ChatPanel";
+import ImagePreviewModal from "./components/ImagePreviewModal";
 import AgentsPage from "./components/AgentsPage";
 import SecurityPage from "./components/SecurityPage";
 
-type Claim = {
-  id: string;
-  orderId: string;
-  item: string;
-  price: number;
-  reason: string;
-  analysis: any;
-  status: "pending" | "active" | "complete";
-  decision?: "pending" | "approved" | "rejected";
-  messages: { role: "user" | "agent" | "ai"; content: string; id: string | number; imageUrl?: string }[];
-  imageUrl?: string;
-  archived?: boolean;
-  orderDetails?: any;
-};
+import { useClaims } from "./hooks/useClaims";
+import { Agent } from "./types";
 
-type Agent = {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-};
-
-// ============================================================
-// LOGIN PAGE COMPONENT
-// ============================================================
-function LoginPage({ onLoginSuccess }: { onLoginSuccess: (token: string, agent: Agent) => void }) {
-  const [email, setEmail] = useState("admin@sinergivisi.ai");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
-    try {
-      const res = await fetch("http://localhost:3001/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Login gagal. Coba lagi.");
-      } else {
-        localStorage.setItem("agent_token", data.token);
-        localStorage.setItem("agent_data", JSON.stringify(data.agent));
-        onLoginSuccess(data.token, data.agent);
-      }
-    } catch {
-      setError("Tidak dapat terhubung ke server.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4">
-      {/* Background glow effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-violet-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative w-full max-w-md"
-      >
-        {/* Card */}
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
-          {/* Header */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20 mb-4">
-              <ShieldCheck className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">SinergiVisi</h1>
-            <p className="text-white/40 text-sm mt-1">Agent Dashboard — Masuk untuk Melanjutkan</p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">Email</label>
-              <input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@sinergivisi.ai"
-                required
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/60 transition-colors"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">Password</label>
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm text-white placeholder-white/20 focus:outline-none focus:border-cyan-500/60 transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"
-                >
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                  {error}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <button
-              id="login-submit"
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Memverifikasi...
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  Masuk ke Dashboard
-                </>
-              )}
-            </button>
-          </form>
-
-          <p className="text-center text-xs text-white/20 mt-6">
-            Hanya agen terotorisasi yang dapat mengakses dashboard ini.
-          </p>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-// ============================================================
-// MAIN ADMIN DASHBOARD
-// ============================================================
 export default function AdminDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [activeMenu, setActiveMenu] = useState<"dashboard" | "agents" | "security">("dashboard");
-
-  const [claims, setClaims] = useState<Claim[]>([]);
-  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
-  const [agentMessage, setAgentMessage] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
-  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
-  const [newOrderIdInput, setNewOrderIdInput] = useState("");
-  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const socketRef = useRef<any>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const selectedClaim = claims.find(c => c.id === selectedClaimId);
+  const {
+    claims,
+    selectedClaim,
+    selectedClaimId,
+    setSelectedClaimId,
+    showArchived,
+    setShowArchived,
+    isArchiving,
+    isUpdatingOrder,
+    handleArchive,
+    handleDecision,
+    handleUpdateOrderId,
+    handleSendMessage,
+    handleTakeOver,
+    setClaims,
+    setClaimOrderDetails,
+    socket
+  } = useClaims(authToken);
 
-  // Cek sesi yang tersimpan saat halaman dimuat
+  // Auth check
   useEffect(() => {
     const token = localStorage.getItem("agent_token");
     const agentData = localStorage.getItem("agent_data");
 
     if (token && agentData) {
-      // Verifikasi token masih valid di server
       fetch("http://localhost:3001/api/auth/me", {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -233,7 +67,6 @@ export default function AdminDashboard() {
             setAuthToken(token);
             setAgent(JSON.parse(agentData));
           } else {
-            // Token expired
             localStorage.removeItem("agent_token");
             localStorage.removeItem("agent_data");
           }
@@ -258,171 +91,14 @@ export default function AdminDashboard() {
     localStorage.removeItem("agent_data");
     setAuthToken(null);
     setAgent(null);
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-    }
+    if (socket) socket.disconnect();
   };
 
-  // Setup WebSocket setelah auth berhasil
-  useEffect(() => {
-    if (!authToken) return;
-
-    const socket = io("http://localhost:3001", {
-      transports: ["websocket"],
-      auth: { token: authToken }
-    });
-    socketRef.current = socket;
-
-    socket.emit("join_admin");
-
-    socket.on("new_claim_alert", (payload: any) => {
-      const isApproved = payload.claimData?.status === "approved" || payload.claimData?.status === "complete";
-      
-      const newClaim: Claim = {
-        id: payload.id,
-        orderId: payload.orderId,
-        item: payload.claimData?.item || `Order ${payload.orderId}`,
-        price: payload.claimData?.price || 0,
-        reason: payload.claimData?.reason || payload.content,
-        analysis: payload.claimData?.analysis || { damageType: "Pending", confidence: 0 },
-        status: isApproved ? "complete" : "pending",
-        decision: isApproved ? "approved" : "pending",
-        imageUrl: payload.claimData?.imageUrl,
-        messages: []
-      };
-
-      setClaims(prev => {
-        const exists = prev.find(c => c.id === payload.id);
-        if (exists) {
-          // Update existing claim with new status/decision
-          return prev.map(c => c.id === payload.id ? { ...c, ...newClaim, messages: c.messages } : c);
-        }
-        return [...prev, newClaim];
-      });
-    });
-
-    socket.on("load_claims", (dbClaims: any[]) => {
-      const mapped: Claim[] = dbClaims.map(c => ({
-        id: c.id,
-        orderId: c.orderId,
-        item: c.item || `Order ${c.orderId}`,
-        price: parseFloat(c.price) || 0,
-        reason: c.analysis?.reason || "Menunggu review",
-        analysis: c.analysis || { damageType: "Pending", confidence: 0 },
-        status: (c.status as any) || "active",
-        decision: c.decision || "pending",
-        imageUrl: c.imageUrl,
-        archived: c.archived,
-        messages: []
-      }));
-      setClaims(mapped);
-    });
-
-    socket.on("new_message", (msg: any) => {
-      setClaims(prev => prev.map(c => {
-        if (c.id === msg.room_id || c.id === msg.roomId) {
-          if (c.messages.some(m => m.id === msg.id)) return c;
-          return {
-            ...c,
-            messages: [...c.messages, { role: msg.role, content: msg.content, id: msg.id, imageUrl: msg.image_url || msg.imageUrl }],
-            imageUrl: msg.image_url || msg.imageUrl || c.imageUrl
-          };
-        }
-        return c;
-      }));
-    });
-
-    socket.on("load_history", ({ roomId, history }: { roomId: string, history: any[] }) => {
-      setClaims(prev => prev.map(c => {
-        if (c.id === roomId) {
-          const latestPhoto = [...history].reverse().find(h => h.image_url || h.imageUrl);
-          return {
-            ...c,
-            messages: history.map(h => ({
-              role: h.role,
-              content: h.content,
-              id: h.id,
-              imageUrl: h.image_url || h.imageUrl
-            })),
-            imageUrl: latestPhoto?.image_url || latestPhoto?.imageUrl || c.imageUrl
-          };
-        }
-        return c;
-      }));
-    });
-
-    socket.on("claim_order_updated", (data: { roomId: string, orderId: string }) => {
-      setClaims(prev => prev.map(c => c.id === data.roomId ? { ...c, orderId: data.orderId } : c));
-    });
-
-    socket.on("claim_decision_sync", (data: { roomId: string, decision: string, status: string }) => {
-      setClaims(prev => prev.map(c => c.id === data.roomId ? { ...c, decision: data.decision as any, status: data.status as any } : c));
-      if (selectedClaimId === data.roomId) {
-        setSelectedClaimId(data.roomId); // Force re-render of workspace header if needed
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [authToken]);
-
-  // Muat arsip dari REST API saat tab arsip dibuka
-  useEffect(() => {
-    if (!authToken || !showArchived) return;
-    fetch("http://localhost:3001/api/claims?archived=true", {
-      headers: { "Authorization": `Bearer ${authToken}` }
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (!Array.isArray(data)) return;
-        const archivedMapped = data.map((c: any) => ({
-          id: c.id,
-          orderId: c.orderId,
-          item: c.item || `Order ${c.orderId}`,
-          price: parseFloat(c.price) || 0,
-          reason: c.analysis?.reason || "Diarsipkan",
-          analysis: c.analysis || { damageType: "-", confidence: 0 },
-          status: c.status || "complete",
-          decision: c.decision || "pending",
-          imageUrl: c.imageUrl,
-          archived: true,
-          messages: []
-        }));
-        
-        setClaims(prev => {
-          const newOnes = archivedMapped.filter(ac => !prev.some(pc => pc.id === ac.id));
-          return [...prev, ...newOnes];
-        });
-      })
-      .catch(console.error);
-  }, [showArchived, authToken]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [selectedClaim?.messages]);
-
-  const handleClaimSession = (claimId: string) => {
-    setClaims(prev => prev.map(c => c.id === claimId ? { ...c, status: "active" } : c));
-    setSelectedClaimId(claimId);
-    if (socketRef.current) {
-      socketRef.current.emit("join_room", { roomId: claimId });
-    }
-  };
-
-  useEffect(() => {
-    if (selectedClaimId && socketRef.current) {
-      socketRef.current.emit("join_room", { roomId: selectedClaimId });
-    }
-  }, [selectedClaimId]);
-
+  // Fetch Order Details
   useEffect(() => {
     const fetchOrderDetails = async () => {
-      if (!selectedClaimId || !selectedClaim || !selectedClaim.orderId) return;
+      if (!selectedClaimId || !selectedClaim || !selectedClaim.orderId || selectedClaim.orderDetails) return;
       if (selectedClaim.orderId.toLowerCase() === "unknown" || selectedClaim.orderId === "") return;
-      if (selectedClaim.orderDetails) return;
       
       try {
         const res = await fetch(`http://localhost:3001/api/orders/${selectedClaim.orderId}`, {
@@ -430,7 +106,7 @@ export default function AdminDashboard() {
         });
         if (res.ok) {
           const orderData = await res.json();
-          setClaims(prev => prev.map(c => c.id === selectedClaimId ? { ...c, orderDetails: orderData } : c));
+          setClaimOrderDetails(selectedClaimId, orderData);
         }
       } catch (err) {
         console.error("Failed to fetch order details:", err);
@@ -440,84 +116,6 @@ export default function AdminDashboard() {
     fetchOrderDetails();
   }, [selectedClaimId, selectedClaim?.orderId, authToken]);
 
-  const handleSendMessage = () => {
-    if (!agentMessage.trim() || !selectedClaimId || !socketRef.current) return;
-
-    const message = agentMessage.trim();
-    socketRef.current.emit("agent_message", {
-      roomId: selectedClaimId,
-      content: message,
-      role: "agent"
-    });
-    setAgentMessage("");
-  };
-
-  const handleArchive = async (claimId: string, archive: boolean) => {
-    if (!authToken) return;
-    setIsArchiving(true);
-    try {
-      await fetch(`http://localhost:3001/api/claims/${claimId}/archive`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
-        body: JSON.stringify({ archived: archive })
-      });
-      // Perbarui status archived di state, jangan dihapus agar bisa pindah antar list
-      setClaims(prev => prev.map(c => c.id === claimId ? { ...c, archived: archive } : c));
-      setSelectedClaimId(null);
-    } catch (err) {
-      console.error("Archive error:", err);
-    } finally {
-      setIsArchiving(false);
-    }
-  };
-
-  const handleUpdateOrderId = async (claimId: string) => {
-    if (!newOrderIdInput.trim() || !authToken) return;
-    setIsUpdatingOrder(true);
-    try {
-      const res = await fetch(`http://localhost:3001/api/claims/${claimId}/order`, {
-        method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ orderId: newOrderIdInput.trim() })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setClaims(prev => prev.map(c => c.id === claimId ? { ...c, orderId: data.orderId, orderDetails: data.orderData } : c));
-        setEditingOrderId(null);
-      } else {
-        alert(data.error || "Gagal mengupdate Nomor Order");
-      }
-    } catch (err) {
-      alert("Terjadi kesalahan jaringan.");
-    } finally {
-      setIsUpdatingOrder(false);
-    }
-  };
-
-  const handleDecision = async (claimId: string, decision: "approved" | "rejected") => {
-    if (!authToken) return;
-    try {
-      const res = await fetch(`http://localhost:3001/api/claims/${claimId}/decision`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
-        body: JSON.stringify({ decision })
-      });
-      if (res.ok) {
-        setClaims(prev => prev.map(c => c.id === claimId ? { ...c, decision, status: 'completed' as any } : c));
-      } else {
-        const errorData = await res.json();
-        alert("Gagal memproses keputusan: " + (errorData.error || "Unknown error"));
-      }
-    } catch (err: any) {
-      console.error("Decision error:", err);
-      alert("Terjadi kesalahan jaringan saat memproses keputusan.");
-    }
-  };
-
-  // Loading state
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center">
@@ -526,17 +124,13 @@ export default function AdminDashboard() {
     );
   }
 
-  // Tampilkan halaman login jika belum auth
   if (!authToken) {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
-  console.log(selectedClaim);
-
-  // === DASHBOARD ===
   return (
     <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
-      {/* Sidebar */}
+      {/* Sidebar Navigation */}
       <aside className="w-64 border-r border-white/5 bg-black/40 p-6 flex flex-col gap-8">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center">
@@ -564,7 +158,6 @@ export default function AdminDashboard() {
           ))}
         </nav>
 
-        {/* Agent Profile */}
         <div className="mt-auto">
           <div className="p-3 bg-white/5 rounded-xl border border-white/10">
             <div className="flex items-center gap-3 mb-3">
@@ -577,7 +170,6 @@ export default function AdminDashboard() {
               </div>
             </div>
             <button
-              id="logout-btn"
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all"
             >
@@ -588,388 +180,98 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <main className="flex-1 flex overflow-hidden">
         {activeMenu === "agents" && <AgentsPage token={authToken!} currentAgentId={agent!.id} />}
         {activeMenu === "security" && <SecurityPage token={authToken!} />}
         {activeMenu === "dashboard" && (
           <>
-          <section className="w-80 border-r border-white/5 flex flex-col">
-          <div className="p-4 border-b border-white/5 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-white/40">
-              {showArchived ? "Arsip Klaim" : "Antrean Klaim"}
-            </h2>
-            <div className="flex items-center gap-2">
-              {!showArchived && claims.length > 0 && (
-                <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-bold">{claims.length}</span>
-              )}
-                            <button
-                onClick={() => { 
-                  const nextValue = !showArchived;
-                  setShowArchived(nextValue); 
-                  setClaims([]); 
-                  setSelectedClaimId(null);
-                  if (!nextValue && socketRef.current) {
-                    socketRef.current.emit("join_admin");
-                  }
-                }}
-                title={showArchived ? "Lihat Aktif" : "Lihat Arsip"}
-                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white/40 hover:text-white"
-              >
-                {showArchived ? <Inbox className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {claims.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-40 text-center opacity-30">
-                {showArchived ? <Archive className="w-8 h-8 mb-2" /> : <Clock className="w-8 h-8 mb-2" />}
-                <p className="text-xs">{showArchived ? "Tidak ada klaim diarsipkan" : "Tidak ada klaim aktif"}</p>
-              </div>
-            )}
-            {claims
-              .filter(c => showArchived ? c.archived : !c.archived)
-              .map(claim => (
-              <motion.div
-                key={claim.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                onClick={() => setSelectedClaimId(claim.id)}
-                className={`p-4 rounded-xl cursor-pointer border transition-all duration-300 ${
-                  selectedClaimId === claim.id 
-                    ? "bg-cyan-500/10 border-cyan-500/50" 
-                    : "bg-white/5 border-transparent hover:border-white/10"
-                }`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-black/40 rounded uppercase tracking-tighter">
-                    {claim.orderId}
-                  </span>
-                  {claim.status === "pending" && <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
-                  {claim.status === "active" && <span className="w-2 h-2 bg-cyan-400 rounded-full" />}
-                  {claim.status === "complete" && <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />}
-                </div>
-                <h3 className="text-sm font-bold truncate">{claim.item}</h3>
-                <p className="text-[10px] text-white/40 mt-1">Rp {Number(claim.price).toLocaleString('id-ID')}</p>
-              </motion.div>
-            ))}
-          </div>
-        </section>
+            <ClaimList 
+              claims={claims}
+              selectedClaimId={selectedClaimId}
+              setSelectedClaimId={setSelectedClaimId}
+              showArchived={showArchived}
+              setShowArchived={setShowArchived}
+              setClaims={setClaims}
+              socket={socket}
+            />
 
-        {/* Workspace */}
-        <section className="flex-1 flex flex-col bg-black/20">
-          {selectedClaim ? (
-            <>
-              {/* Workspace Header */}
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-bold">{selectedClaim.item}</h2>
-                  <div className="text-xs text-white/40 flex items-center gap-2 mt-1">
-                    <span>Order ID:</span>
-                    {editingOrderId === selectedClaim.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={newOrderIdInput}
-                          onChange={(e) => setNewOrderIdInput(e.target.value)}
-                          placeholder="ORD-XXXXXX"
-                          className="bg-black/50 border border-white/20 rounded px-2 py-1 text-white outline-none"
-                        />
-                        <button 
-                          onClick={() => handleUpdateOrderId(selectedClaim.id)}
-                          disabled={isUpdatingOrder}
-                          className="p-1 bg-cyan-600 hover:bg-cyan-500 rounded text-white disabled:opacity-50"
-                        >
-                          <Check className="w-3 h-3" />
-                        </button>
-                        <button 
-                          onClick={() => setEditingOrderId(null)}
-                          className="p-1 bg-red-600/50 hover:bg-red-500/50 rounded text-white"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="font-mono bg-white/5 px-2 py-0.5 rounded">{selectedClaim.orderId}</span>
-                        {(selectedClaim.orderId.toLowerCase() === "unknown" || selectedClaim.orderId === "") && (
-                          <button 
-                            onClick={() => {
-                              setEditingOrderId(selectedClaim.id);
-                              setNewOrderIdInput("");
-                            }}
-                            className="text-cyan-400 hover:text-cyan-300 transition-colors"
-                            title="Update Nomor Order"
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </button>
-                        )}
-                      </>
-                    )}
-                    <span className="ml-2">• Klaim Terdeteksi Gemini</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {selectedClaim.status === "pending" && (
-                    <button 
-                      onClick={() => handleClaimSession(selectedClaim.id)}
-                      className="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-cyan-500/20"
-                    >
-                      Ambil Alih
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleArchive(selectedClaim.id, !showArchived)}
-                    disabled={isArchiving}
-                    title={showArchived ? "Pulihkan dari arsip" : "Arsipkan klaim ini"}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl transition-all disabled:opacity-50 ${
-                      showArchived
-                        ? "bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30"
-                        : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10"
-                    }`}
-                  >
-                    {isArchiving ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : showArchived ? (
-                      <ArchiveRestore className="w-4 h-4" />
-                    ) : (
-                      <Archive className="w-4 h-4" />
-                    )}
-                    {showArchived ? "Pulihkan" : "Arsipkan"}
-                  </button>
-                </div>
-              </div>
+            <section className="flex-1 flex flex-col bg-black/20">
+              {selectedClaim ? (
+                <>
+                  <WorkspaceHeader 
+                    claim={selectedClaim}
+                    showArchived={showArchived}
+                    isArchiving={isArchiving}
+                    isUpdatingOrder={isUpdatingOrder}
+                    handleArchive={handleArchive}
+                    handleUpdateOrderId={handleUpdateOrderId}
+                    handleTakeOver={handleTakeOver}
+                  />
 
-              {/* Decision Panel (Quick Action) - Selalu tampil jika belum ada keputusan */}
-              {selectedClaim.status === "pending" || selectedClaim.status === "active" && (
-                <div className="mx-6 mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-500/5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-amber-200">Menunggu Inspeksi Agen</p>
-                      <p className="text-xs text-amber-200/60 italic">Silakan tinjau bukti foto dan putuskan refund.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleDecision(selectedClaim.id, "rejected")}
-                      className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg transition-all"
-                    >
-                      Tolak Refund
-                    </button>
-                    <button
-                      onClick={() => handleDecision(selectedClaim.id, "approved")}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-emerald-500/20"
-                    >
-                      Setujui Refund
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Decision Result Badge */}
-              {selectedClaim.decision && selectedClaim.decision !== "pending" && (
-                <div className={`mx-6 mt-4 p-4 border rounded-2xl flex items-center gap-3 ${
-                  selectedClaim.decision === 'approved' 
-                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
-                    : "bg-red-500/10 border-red-500/20 text-red-400"
-                }`}>
-                  {selectedClaim.decision === 'approved' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                  <p className="text-sm font-bold">
-                    Keputusan: {selectedClaim.decision === 'approved' ? "REFUND DISETUJUI" : "REFUND DITOLAK"}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex-1 flex overflow-hidden">
-                {/* Details */}
-                <div className="w-1/2 p-6 overflow-y-auto border-r border-white/5 space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Detail Analisis Gemini</h3>
-                    <div className="p-4 admin-card space-y-4">
+                  {/* Decision Panel */}
+                  {(selectedClaim.status === "pending" || selectedClaim.status === "active") && (
+                    <div className="mx-6 mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-500/5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                          <CheckCircle className="text-emerald-500 w-6 h-6" />
+                        <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-amber-500" />
                         </div>
                         <div>
-                          <p className="text-[10px] text-white/40 uppercase">Damage Detected</p>
-                          <p className="text-sm font-bold">{selectedClaim.analysis?.damageType || selectedClaim.analysis?.detectedDamage || "Fisik/Pecah"}</p>
+                          <p className="text-sm font-bold text-amber-200">Menunggu Inspeksi Agen</p>
+                          <p className="text-xs text-amber-200/60 italic">Silakan tinjau bukti foto dan putuskan refund.</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                          <ClipboardCheck className="text-blue-500 w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-white/40 uppercase">Confidence Score</p>
-                          <p className="text-sm font-bold">{((selectedClaim.analysis?.confidence || 0) * 100).toFixed(1)}%</p>
-                        </div>
-                      </div>
-                      <div className="pt-2 border-t border-white/5">
-                        <p className="text-[10px] text-white/40 uppercase mb-1">Alasan Review Manual</p>
-                        <div className="flex gap-2 items-start text-amber-400">
-                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <p className="text-xs leading-relaxed italic">{selectedClaim.reason}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Bukti Foto</h3>
-                    <div 
-                      onClick={() => setPreviewImage(selectedClaim.imageUrl || "/hero.png")}
-                      className="aspect-video bg-white/5 rounded-xl border border-white/5 flex items-center justify-center overflow-hidden cursor-zoom-in group"
-                    >
-                       <img 
-                        src={selectedClaim.imageUrl || "/hero.png"} 
-                        alt="Evidence" 
-                        className="w-full h-full object-contain transition-all group-hover:scale-105" 
-                       />
-                    </div>
-                  </div>
-
-                  {/* Detail Pembelian */}
-                  {selectedClaim.orderDetails && (
-                    <div className="space-y-4 pt-4 border-t border-white/5">
-                      <div className="flex items-center gap-2">
-                        <ShoppingCart className="w-4 h-4 text-cyan-400" />
-                        <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Detail Pembelian</h3>
-                      </div>
-                      <div className="space-y-3">
-                        {selectedClaim.orderDetails.items?.map((item: any, idx: number) => {
-                          const itemImg = `http://localhost:8001/storage/${item.product.image_path}`;
-                          return (
-                            <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex gap-3 items-center group/item hover:bg-white/10 transition-colors">
-                              <div 
-                                onClick={() => setPreviewImage(itemImg)}
-                                className="w-12 h-12 bg-black/40 rounded-lg overflow-hidden border border-white/10 shrink-0 cursor-zoom-in relative"
-                              >
-                                <img 
-                                  src={itemImg} 
-                                  alt={item.product.name}
-                                  className="w-full h-full object-cover group-hover/item:scale-110 transition-transform"
-                                />
-                                <div className="absolute inset-0 bg-cyan-500/20 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center">
-                                  <Eye className="w-4 h-4 text-white" />
-                                </div>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold truncate">{item.product.name}</p>
-                                <p className="text-[10px] text-white/40">Rp {Number(item.price).toLocaleString('id-ID')} x {item.quantity}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Chat Panel */}
-                <div className="w-1/2 flex flex-col">
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={scrollRef}>
-                    {selectedClaim.status === "pending" ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50">
-                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center">
-                          <MessageSquare className="w-8 h-8" />
-                        </div>
-                        <p className="text-sm max-w-[200px]">Silakan klik "Ambil Alih" untuk mulai berbicara dengan pengguna.</p>
-                      </div>
-                    ) : (
-                      <>
-                        {selectedClaim.messages.map(msg => (
-                          <div key={msg.id} className={`flex ${msg.role === 'agent' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] p-3 rounded-xl text-sm ${
-                              msg.role === 'agent' ? 'bg-cyan-600 text-white rounded-tr-none' : 'bg-white/5 text-white/80 rounded-tl-none border border-white/10'
-                            }`}>
-                              {msg.imageUrl && (
-                                <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-h-48 w-auto object-contain cursor-zoom-in" />
-                              )}
-                              {msg.content.replace(/\[INTENT:[A-Z_]+\]/g, '').trim()}
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-
-                  {selectedClaim.status === "active" && (
-                    <div className="p-4 border-t border-white/5 bg-black/20">
-                      <form 
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }}
-                        className="flex gap-3"
-                      >
-                        <input 
-                          type="text" 
-                          value={agentMessage}
-                          onChange={(e) => setAgentMessage(e.target.value)}
-                          placeholder="Balas ke pengguna..."
-                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
-                        />
-                        <button 
-                          type="submit"
-                          className="p-3 bg-cyan-600 hover:bg-cyan-500 rounded-xl transition-all"
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDecision(selectedClaim.id, "rejected")}
+                          className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold rounded-lg transition-all"
                         >
-                          <Send className="w-5 h-5" />
+                          Tolak Refund
                         </button>
-                      </form>
+                        <button
+                          onClick={() => handleDecision(selectedClaim.id, "approved")}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-emerald-500/20"
+                        >
+                          Setujui Refund
+                        </button>
+                      </div>
                     </div>
                   )}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 opacity-20">
-              <ClipboardCheck className="w-24 h-24" />
-              <div>
-                <h3 className="text-2xl font-bold">Workspace Kosong</h3>
-                <p className="text-sm">Pilih klaim dari daftar di samping untuk memulai peninjauan.</p>
-              </div>
-            </div>
-          )}
-        </section>
 
-        {/* Image Preview Modal */}
-        <AnimatePresence>
-          {previewImage && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setPreviewImage(null)}
-              className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-8 cursor-zoom-out"
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="relative max-w-5xl max-h-full flex items-center justify-center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <img 
-                  src={previewImage} 
-                  alt="Preview" 
-                  className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl border border-white/10"
-                />
-                <button
-                  onClick={() => setPreviewImage(null)}
-                  className="absolute -top-4 -right-4 w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 transition-all shadow-xl"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </>
-    )}
-    </main>
-  </div>
+                  {/* Decision Result */}
+                  {selectedClaim.decision && selectedClaim.decision !== "pending" && (
+                    <div className={`mx-6 mt-4 p-4 border rounded-2xl flex items-center gap-3 ${
+                      selectedClaim.decision === 'approved' 
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                        : "bg-red-500/10 border-red-500/20 text-red-400"
+                    }`}>
+                      {selectedClaim.decision === 'approved' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                      <p className="text-sm font-bold">
+                        Keputusan: {selectedClaim.decision === 'approved' ? "REFUND DISETUJUI" : "REFUND DITOLAK"}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex-1 flex overflow-hidden">
+                    <ClaimDetails claim={selectedClaim} setPreviewImage={setPreviewImage} />
+                    <ChatPanel claim={selectedClaim} handleSendMessage={handleSendMessage} />
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 opacity-20">
+                  <ClipboardCheck className="w-24 h-24" />
+                  <div>
+                    <h3 className="text-2xl font-bold">Workspace Kosong</h3>
+                    <p className="text-sm">Pilih klaim dari daftar di samping untuk memulai peninjauan.</p>
+                  </div>
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </main>
+
+      <ImagePreviewModal previewImage={previewImage} setPreviewImage={setPreviewImage} />
+    </div>
   );
 }

@@ -22,7 +22,9 @@ module.exports = (io, socket) => {
         status: c.status,
         decision: c.decision,
         mode: c.mode,
-        analysis: c.analysis_result
+        analysis: c.analysis_result,
+        imageUrl: c.image_url,
+        archived: c.archived
       })));
     } catch (err) {
       console.error("Error loading claims for admin:", err);

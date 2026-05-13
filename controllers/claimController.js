@@ -213,35 +213,52 @@ const analyzePhoto = async (req, res) => {
     const customerPhotoB64 = file.buffer.toString("base64");
     
     const prompt = `
-      Anda adalah pakar inspeksi kualitas SinergiVisi AI.
-      Tugas Anda adalah membandingkan FOTO PELANGGAN (gambar terakhir) dengan FOTO PRODUK ASLI dari katalog kami (gambar-gambar sebelumnya).
-      RIWAYAT PESAN USER: "${customerReason}" 
-      (Tugas Anda: Temukan alasan kerusakan dari riwayat pesan di atas. Abaikan kode [INTENT:...] jika ada, fokus pada deskripsi kerusakan).
-      LANGKAH ANALISIS:
-      1. Identifikasi apakah barang di FOTO PELANGGAN ada di dalam daftar PRODUK ASLI gunakan nama produk yang sesuai dengan item yang rusak. 
-      2. Berikan isProductMatch: true jika cocok dengan salah satu produk dalam order ini.
-      3. Periksa apakah ada kerusakan fisik di FOTO PELANGGAN yang sesuai dengan ALASAN PELANGGAN.
-      Berikan output dalam format JSON:
-      {
-        "isProductMatch": boolean, "isDamageMatch": boolean, "isDamaged": boolean, "confidence": number, 
-        "description": "string", "detectedItem": "string", "detectedDamage": "string"
-      }
+    # ROLE
+    Anda adalah Pakar Inspeksi Kualitas SinergiVisi AI yang memiliki ketelitian tinggi dalam mendeteksi kerusakan pada barang pecah belah premium.
+
+    # CONTEXT & INPUT
+    - RIWAYAT PESAN USER: "${customerReason}"
+    - INPUT GAMBAR: Beberapa gambar awal adalah Referensi Katalog (Produk Asli). Gambar terakhir adalah Foto Kondisi Barang yang dilaporkan pelanggan.
+
+    # TUGAS & LANGKAH ANALISIS
+    1. **Ekstraksi Konteks**: Temukan deskripsi kerusakan dari riwayat pesan di atas (Abaikan kode internal seperti [INTENT:...]).
+    2. **Verifikasi Produk**: Bandingkan visual (bentuk, pola, warna) antara Foto Pelanggan dengan Foto Referensi Katalog. Gunakan nama produk yang relevan.
+    3. **Analisis Kerusakan**:
+      - Cari bukti visual kerusakan (pecah, retak, gompel, goresan) pada foto pelanggan.
+      - Bandingkan apakah kerusakan tersebut sesuai dengan alasan yang ditulis pelanggan di riwayat pesan.
+
+    # OUTPUT FORMAT (JSON ONLY)
+    Anda wajib memberikan output dalam format JSON mentah tanpa markdown:
+    {
+      "isProductMatch": boolean, 
+      "isDamageMatch": boolean, 
+      "isDamaged": boolean, 
+      "confidence": number, 
+      "description": "Penjelasan detail hasil perbandingan visual", 
+      "detectedItem": "Nama item yang terdeteksi dari katalog", 
+      "detectedDamage": "Jenis kerusakan yang teramati secara visual"
+    }
     `;
 
     const visionModels = ["gemini-3.1-flash-lite", "gemini-3.1-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
     let analysisResult = null;
 
-    const imageParts = originalProducts.map(p => ({
-      inlineData: { data: p.base64, mimeType: p.mimeType }
-    }));
-    imageParts.push({
-      inlineData: { data: customerPhotoB64, mimeType: file.mimetype }
+    const parts = [{ text: prompt }];
+    
+    // Tambahkan gambar referensi dengan label teks
+    originalProducts.forEach(p => {
+      parts.push({ text: `PRODUK ASLI (REFERENSI KATALOG): ${p.name}` });
+      parts.push({ inlineData: { data: p.base64, mimeType: p.mimeType } });
     });
+
+    // Tambahkan foto pelanggan dengan label teks
+    parts.push({ text: "FOTO KONDISI BARANG DARI PELANGGAN (UNTUK DIANALISIS):" });
+    parts.push({ inlineData: { data: customerPhotoB64, mimeType: file.mimetype } });
 
     for (const vModelName of visionModels) {
       try {
         const model = genAI.getGenerativeModel({ model: vModelName });
-        const result = await model.generateContent([prompt, ...imageParts]);
+        const result = await model.generateContent(parts);
         const text = result.response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         analysisResult = jsonMatch ? JSON.parse(jsonMatch[0]) : null;

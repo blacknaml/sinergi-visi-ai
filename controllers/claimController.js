@@ -224,7 +224,7 @@ const analyzePhoto = async (req, res) => {
     1. **Ekstraksi Konteks**: Temukan deskripsi kerusakan dari riwayat pesan di atas (Abaikan kode internal seperti [INTENT:...]).
     2. **Verifikasi Produk**: Bandingkan visual (bentuk, pola, warna) antara Foto Pelanggan dengan Foto Referensi Katalog. Gunakan nama produk yang relevan.
     3. **Analisis Kerusakan**:
-      - Cari bukti visual kerusakan (pecah, retak, gompel, goresan) pada foto pelanggan.
+      - Cari bukti visual kerusakan (pecah, retak, gompel, goresan, penyok, dll.) pada foto pelanggan.
       - Bandingkan apakah kerusakan tersebut sesuai dengan alasan yang ditulis pelanggan di riwayat pesan.
 
     # OUTPUT FORMAT (JSON ONLY)

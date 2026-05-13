@@ -41,6 +41,7 @@ type Claim = {
   decision?: "pending" | "approved" | "rejected";
   messages: { role: "user" | "agent" | "ai"; content: string; id: string | number; imageUrl?: string }[];
   imageUrl?: string;
+  archived?: boolean;
   orderDetails?: any;
 };
 
@@ -311,6 +312,7 @@ export default function AdminDashboard() {
         status: (c.status as any) || "active",
         decision: c.decision || "pending",
         imageUrl: c.image_url,
+        archived: c.archived,
         messages: []
       }));
       setClaims(mapped);
@@ -618,7 +620,9 @@ export default function AdminDashboard() {
                 <p className="text-xs">{showArchived ? "Tidak ada klaim diarsipkan" : "Tidak ada klaim aktif"}</p>
               </div>
             )}
-            {claims.map(claim => (
+            {claims
+              .filter(c => showArchived ? (c.status === "complete" || c.archived) : (c.status !== "complete" && !c.archived))
+              .map(claim => (
               <motion.div
                 key={claim.id}
                 initial={{ opacity: 0, x: -10 }}

@@ -170,11 +170,14 @@ module.exports = (io, socket) => {
       });
 
       io.to(roomId).emit("mode_update", { mode: "human" });
-      const aiInsert = await pool.query(
-        "INSERT INTO messages (room_id, role, content) VALUES ($1, $2, $3) RETURNING *",
-        [roomId, "ai", "Sistem telah meneruskan laporan ini ke tim klaim manusia. Mohon tunggu sebentar."]
-      );
-      io.to(roomId).emit("new_message", aiInsert.rows[0]);
+
+      if (claimData.status !== "approved") {
+        const aiInsert = await pool.query(
+          "INSERT INTO messages (room_id, role, content) VALUES ($1, $2, $3) RETURNING *",
+          [roomId, "ai", "Sistem telah meneruskan laporan ini ke tim klaim manusia. Mohon tunggu sebentar."]
+        );
+        io.to(roomId).emit("new_message", aiInsert.rows[0]);
+      }
     } catch (err) {
       console.error("Error in request_handoff:", err);
     }

@@ -57,7 +57,7 @@ app.get("/api/security/stats", authenticateAgent, securityController.getSecurity
 socketManager(io);
 
 // Start Server
-const PORT = process.env.WS_PORT || 3001;
+const PORT = process.env.PORT || process.env.WS_PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`=========================================`);
   console.log(` Integrated Server running on port ${PORT}`);

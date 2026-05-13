@@ -210,6 +210,7 @@ export default function AdminDashboard() {
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [newOrderIdInput, setNewOrderIdInput] = useState("");
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const socketRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -799,11 +800,14 @@ export default function AdminDashboard() {
 
                   <div className="space-y-4">
                     <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Bukti Foto</h3>
-                    <div className="aspect-video bg-white/5 rounded-xl border border-white/5 flex items-center justify-center overflow-hidden">
+                    <div 
+                      onClick={() => setPreviewImage(selectedClaim.imageUrl || "/hero.png")}
+                      className="aspect-video bg-white/5 rounded-xl border border-white/5 flex items-center justify-center overflow-hidden cursor-zoom-in group"
+                    >
                        <img 
                         src={selectedClaim.imageUrl || "/hero.png"} 
                         alt="Evidence" 
-                        className="w-full h-full object-contain transition-all cursor-zoom-in" 
+                        className="w-full h-full object-contain transition-all group-hover:scale-105" 
                        />
                     </div>
                   </div>
@@ -816,21 +820,30 @@ export default function AdminDashboard() {
                         <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Detail Pembelian</h3>
                       </div>
                       <div className="space-y-3">
-                        {selectedClaim.orderDetails.items?.map((item: any, idx: number) => (
-                          <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex gap-3 items-center">
-                            <div className="w-12 h-12 bg-black/40 rounded-lg overflow-hidden border border-white/10 shrink-0">
-                              <img 
-                                src={`http://localhost:8001/storage/${item.product.image_path}`} 
-                                alt={item.product.name}
-                                className="w-full h-full object-cover"
-                              />
+                        {selectedClaim.orderDetails.items?.map((item: any, idx: number) => {
+                          const itemImg = `http://localhost:8001/storage/${item.product.image_path}`;
+                          return (
+                            <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex gap-3 items-center group/item hover:bg-white/10 transition-colors">
+                              <div 
+                                onClick={() => setPreviewImage(itemImg)}
+                                className="w-12 h-12 bg-black/40 rounded-lg overflow-hidden border border-white/10 shrink-0 cursor-zoom-in relative"
+                              >
+                                <img 
+                                  src={itemImg} 
+                                  alt={item.product.name}
+                                  className="w-full h-full object-cover group-hover/item:scale-110 transition-transform"
+                                />
+                                <div className="absolute inset-0 bg-cyan-500/20 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center">
+                                  <Eye className="w-4 h-4 text-white" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold truncate">{item.product.name}</p>
+                                <p className="text-[10px] text-white/40">Rp {Number(item.price).toLocaleString('id-ID')} x {item.quantity}</p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold truncate">{item.product.name}</p>
-                              <p className="text-[10px] text-white/40">Rp {Number(item.price).toLocaleString('id-ID')} x {item.quantity}</p>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -902,9 +915,42 @@ export default function AdminDashboard() {
             </div>
           )}
         </section>
-      </> /* close activeMenu === "dashboard" */
-      )}
-      </main>
-    </div>
+
+        {/* Image Preview Modal */}
+        <AnimatePresence>
+          {previewImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPreviewImage(null)}
+              className="fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-8 cursor-zoom-out"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative max-w-5xl max-h-full flex items-center justify-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <img 
+                  src={previewImage} 
+                  alt="Preview" 
+                  className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl border border-white/10"
+                />
+                <button
+                  onClick={() => setPreviewImage(null)}
+                  className="absolute -top-4 -right-4 w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 transition-all shadow-xl"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
+    )}
+    </main>
+  </div>
   );
 }

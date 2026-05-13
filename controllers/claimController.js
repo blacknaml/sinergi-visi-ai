@@ -131,11 +131,14 @@ const updateClaimOrder = async (req, res, io) => {
     
     await pool.query("UPDATE claims SET order_id = $1 WHERE room_id = $2", [orderId.toUpperCase(), roomId]);
     
+    // Ambil detail pesanan terbaru untuk dikirim balik ke frontend
+    const orderData = await getOrderDetails(orderId);
+    
     if (io) {
       io.emit("claim_order_updated", { roomId, orderId: orderId.toUpperCase() });
     }
     
-    res.json({ success: true, orderId: orderId.toUpperCase() });
+    res.json({ success: true, orderId: orderId.toUpperCase(), orderData });
   } catch (err) {
     console.error("Error updating order ID:", err);
     res.status(500).json({ error: "Gagal menyimpan Order ID" });
@@ -269,11 +272,26 @@ const logRefund = async (req, res) => {
   }
 };
 
+/**
+ * Get full order details from eCommerce for human agent verification
+ */
+const getOrderDetail = async (req, res) => {
+  const { orderId } = req.params;
+  try {
+    const orderData = await getOrderDetails(orderId);
+    if (!orderData) return res.status(404).json({ error: "Order tidak ditemukan." });
+    res.json(orderData);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil detail order." });
+  }
+};
+
 module.exports = {
   getClaims,
   archiveClaim,
   decideClaim,
   updateClaimOrder,
+  getOrderDetail,
   analyzePhoto,
   logRefund
 };

@@ -22,7 +22,9 @@ import {
   Inbox,
   Pencil,
   Check,
-  X
+  X,
+  Package,
+  ShoppingCart
 } from "lucide-react";
 import { io } from "socket.io-client";
 import AgentsPage from "./components/AgentsPage";
@@ -39,6 +41,7 @@ type Claim = {
   decision?: "pending" | "approved" | "rejected";
   messages: { role: "user" | "agent" | "ai"; content: string; id: string | number; imageUrl?: string }[];
   imageUrl?: string;
+  orderDetails?: any;
 };
 
 type Agent = {
@@ -397,6 +400,28 @@ export default function AdminDashboard() {
     }
   }, [selectedClaimId]);
 
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      if (!selectedClaimId || !selectedClaim || !selectedClaim.orderId) return;
+      if (selectedClaim.orderId.toLowerCase() === "unknown" || selectedClaim.orderId === "") return;
+      if (selectedClaim.orderDetails) return;
+      
+      try {
+        const res = await fetch(`http://localhost:3001/api/orders/${selectedClaim.orderId}`, {
+          headers: { "Authorization": `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const orderData = await res.json();
+          setClaims(prev => prev.map(c => c.id === selectedClaimId ? { ...c, orderDetails: orderData } : c));
+        }
+      } catch (err) {
+        console.error("Failed to fetch order details:", err);
+      }
+    };
+
+    fetchOrderDetails();
+  }, [selectedClaimId, selectedClaim?.orderId, authToken]);
+
   const handleSendMessage = () => {
     if (!agentMessage.trim() || !selectedClaimId || !socketRef.current) return;
 
@@ -442,6 +467,7 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
+        setClaims(prev => prev.map(c => c.id === claimId ? { ...c, orderId: data.orderId, orderDetails: data.orderData } : c));
         setEditingOrderId(null);
       } else {
         alert(data.error || "Gagal mengupdate Nomor Order");
@@ -781,6 +807,33 @@ export default function AdminDashboard() {
                        />
                     </div>
                   </div>
+
+                  {/* Detail Pembelian */}
+                  {selectedClaim.orderDetails && (
+                    <div className="space-y-4 pt-4 border-t border-white/5">
+                      <div className="flex items-center gap-2">
+                        <ShoppingCart className="w-4 h-4 text-cyan-400" />
+                        <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Detail Pembelian</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {selectedClaim.orderDetails.items?.map((item: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex gap-3 items-center">
+                            <div className="w-12 h-12 bg-black/40 rounded-lg overflow-hidden border border-white/10 shrink-0">
+                              <img 
+                                src={`http://localhost:8001/storage/${item.product.image_path}`} 
+                                alt={item.product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold truncate">{item.product.name}</p>
+                              <p className="text-[10px] text-white/40">Rp {Number(item.price).toLocaleString('id-ID')} x {item.quantity}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Chat Panel */}

@@ -43,6 +43,7 @@ app.get("/api/claims", authenticateAgent, claimController.getClaims);
 app.patch("/api/claims/:roomId/archive", authenticateAgent, (req, res) => claimController.archiveClaim(req, res, io));
 app.patch("/api/claims/:roomId/decision", authenticateAgent, (req, res) => claimController.decideClaim(req, res, io));
 app.patch("/api/claims/:roomId/order", authenticateAgent, (req, res) => claimController.updateClaimOrder(req, res, io));
+app.get("/api/orders/:orderId", authenticateAgent, claimController.getOrderDetail);
 
 // Vision AI & Logic
 app.post("/api/analyze", upload.single("file"), claimController.analyzePhoto);

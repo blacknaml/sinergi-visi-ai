@@ -218,9 +218,9 @@ export default function Home() {
     addMessage("ai", "Sedang menganalisis bukti kerusakan dengan Gemini...", "analysis");
     
     try {
-      // Ambil alasan dari beberapa pesan user terakhir agar konteksnya lengkap (misal: "Pecah" + "Barang ini")
+      // Kirim seluruh riwayat pesan teks user agar Gemini tahu alasan kerusakan yang pernah disebutkan
       const userTextMsgs = messages.filter(m => m.role === "user" && m.type === "text");
-      const lastUserMsg = userTextMsgs.slice(-3).map(m => m.content).join(" ");
+      const lastUserMsg = userTextMsgs.map(m => m.content).join(" | ") || "Tidak ada alasan tertulis";
 
       const formData = new FormData();
       formData.append("file", file);

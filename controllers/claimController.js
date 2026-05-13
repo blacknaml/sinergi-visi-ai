@@ -287,6 +287,7 @@ const logRefund = async (req, res) => {
       [orderId, amount, "success"]
     );
     if (reason) await reportClaimToMCP(orderId, reason);
+
     res.json({ success: true, refund: insertRes.rows[0] });
   } catch (err) {
     res.status(500).json({ error: "Gagal mencatat refund." });

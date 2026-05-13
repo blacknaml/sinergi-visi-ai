@@ -138,15 +138,32 @@ module.exports = (io, socket) => {
   socket.on("request_handoff", async (data) => {
     const { roomId, claimData } = data;
     try {
+      const status = claimData.status === "approved" ? "complete" : "pending";
+      const decision = claimData.status === "approved" ? "approved" : "pending";
+      const archived = claimData.status === "approved";
+
       await pool.query(
-        "INSERT INTO claims (room_id, order_id, item_name, price, status, mode, analysis_result) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (room_id) DO UPDATE SET mode = 'human', analysis_result = $7",
-        [roomId, claimData.orderId, claimData.item, claimData.price, "pending", "human", JSON.stringify(claimData.analysis)]
+        `INSERT INTO claims (room_id, order_id, item_name, price, status, decision, mode, analysis_result, archived) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+         ON CONFLICT (room_id) DO UPDATE SET 
+         status = $5, decision = $6, mode = $7, analysis_result = $8, archived = $9`,
+        [
+          roomId, 
+          claimData.orderId, 
+          claimData.item, 
+          claimData.price, 
+          status, 
+          decision, 
+          "human", 
+          JSON.stringify(claimData.analysis),
+          archived
+        ]
       );
       
       io.emit("new_claim_alert", {
         id: roomId,
         orderId: claimData.orderId,
-        content: `Review Manual: ${claimData.reason}`,
+        content: claimData.status === "approved" ? `Auto-Approved: ${claimData.reason}` : `Review Manual: ${claimData.reason}`,
         claimData: claimData,
         timestamp: new Date()
       });

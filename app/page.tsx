@@ -123,12 +123,17 @@ export default function Home() {
     socket.on("load_history", ({ roomId, history }: { roomId: string, history: Message[] }) => {
       if (history.length > 0) {
         setMessages(history);
-        // Restore currentOrder dari history jika ada order ID yang tersebut
-        const allContent = history.map(m => m.content || "").join(" ");
+        // Restore currentOrder dari history jika ada order ID atau item yang tersebut
+        const allContent = history.map(m => m.content || "").join(" | ");
         const orderMatch = allContent.match(/ORD-[A-Z0-9]+/gi);
         if (orderMatch && orderMatch.length > 0) {
           const lastOrderId = orderMatch[orderMatch.length - 1];
-          setCurrentOrder((prev: any) => prev?.id ? prev : { id: lastOrderId });
+          setCurrentOrder((prev: any) => ({ ...prev, id: lastOrderId }));
+        }
+        
+        const itemMatch = allContent.match(/\[INTENT:REQUEST_CLAIM_ITEM\] (.*?)(?=\s\||$)/);
+        if (itemMatch) {
+          setCurrentOrder((prev: any) => ({ ...prev, item: itemMatch[1].trim() }));
         }
       }
     });
@@ -323,6 +328,7 @@ export default function Home() {
           });
         }
       }
+      setOrderItems([]); // Bersihkan pilihan item setelah berhasil dianalisis
       setStep("chat"); // Kembalikan ke mode chat teks setelah analisis
     } catch (error) {
       addMessage("ai", "Maaf, terjadi kesalahan saat menganalisis gambar. Silakan coba lagi nanti.");
@@ -485,7 +491,10 @@ export default function Home() {
                 {orderItems.map((item, idx) => (
                   <button
                     key={idx}
-                    onClick={() => handleSend(`[INTENT:REQUEST_CLAIM_ITEM] ${item.name}`)}
+                    onClick={() => {
+                      setCurrentOrder((prev: any) => ({ ...prev, item: item.name, price: item.price }));
+                      handleSend(`[INTENT:REQUEST_CLAIM_ITEM] ${item.name}`);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/40 rounded-full transition-all duration-200 text-violet-300 hover:text-white hover:border-violet-400/60 group"
                   >
                     <Package className="w-3 h-3 opacity-60 group-hover:opacity-100" />

@@ -267,8 +267,11 @@ const analyzePhoto = async (req, res) => {
     }
 
     if (!analysisResult) throw new Error("Gagal menganalisa foto.");
+
+    console.log('analysisResult', analysisResult);
     res.json({ ...analysisResult, totalPrice: orderData.total_price });
   } catch (error) {
+    console.error('error', error);
     res.status(500).json({ error: error.message });
   }
 };

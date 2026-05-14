@@ -1,5 +1,5 @@
-const ECOM_API_BASE = "http://127.0.0.1:8001/api/mcp";
-const ECOM_STORAGE_BASE = "http://127.0.0.1:8001/storage/";
+const ECOM_API_BASE = process.env.ECOM_API_BASE || "http://127.0.0.1:8001/api/mcp";
+const ECOM_STORAGE_BASE = process.env.ECOM_STORAGE_BASE || "http://127.0.0.1:8001/storage/";
 const MCP_TOKEN = process.env.MCP_TOKEN || "";
 
 /**

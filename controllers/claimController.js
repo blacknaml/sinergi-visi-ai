@@ -213,7 +213,8 @@ const analyzePhoto = async (req, res) => {
     }
 
     const customerPhotoB64 = fs.readFileSync(file.path).toString("base64");
-    const publicImageUrl = `http://localhost:3001/uploads/${file.filename}`;
+    const backendBase = process.env.BACKEND_URL || "http://localhost:3001";
+    const publicImageUrl = `${backendBase}/uploads/${file.filename}`;
     
     const prompt = `
     # ROLE

@@ -2,6 +2,7 @@
 
 import { CheckCircle, ClipboardCheck, AlertTriangle, ShoppingCart, Eye } from "lucide-react";
 import { Claim } from "../types";
+import { ECOM_STORAGE_BASE } from "../../../lib/api-config";
 
 interface ClaimDetailsProps {
   claim: Claim;
@@ -67,7 +68,7 @@ export default function ClaimDetails({ claim, setPreviewImage }: ClaimDetailsPro
           </div>
           <div className="space-y-3">
             {claim.orderDetails.items?.map((item: any, idx: number) => {
-              const itemImg = `http://localhost:8001/storage/${item.product.image_path}`;
+              const itemImg = `${ECOM_STORAGE_BASE}${item.product.image_path}`;
               return (
                 <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex gap-3 items-center group/item hover:bg-white/10 transition-colors">
                   <div 

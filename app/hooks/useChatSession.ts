@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { Message, ChatStatus, OrderItem } from "../types/chat";
+import { API_BASE_URL } from "../../lib/api-config";
 
 export function useChatSession() {
   const [messages, setMessages] = useState<Message[]>([
@@ -26,7 +27,7 @@ export function useChatSession() {
   const socketRef = useRef<any>(null);
 
   useEffect(() => {
-    const socket = io("http://localhost:3001", {
+    const socket = io(API_BASE_URL, {
       transports: ["websocket"]
     });
     socketRef.current = socket;

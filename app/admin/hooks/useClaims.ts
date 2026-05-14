@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { io } from "socket.io-client";
 import { Claim, Agent } from "../types";
+import { API_BASE_URL } from "../../../lib/api-config";
 
 export function useClaims(authToken: string | null) {
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -15,7 +14,7 @@ export function useClaims(authToken: string | null) {
   useEffect(() => {
     if (!authToken) return;
 
-    const socket = io("http://localhost:3001", {
+    const socket = io(API_BASE_URL, {
       transports: ["websocket"],
       auth: { token: authToken }
     });
@@ -113,7 +112,7 @@ export function useClaims(authToken: string | null) {
 
   useEffect(() => {
     if (!authToken || !showArchived) return;
-    fetch("http://localhost:3001/api/claims?archived=true", {
+    fetch(`${API_BASE_URL}/api/claims?archived=true`, {
       headers: { "Authorization": `Bearer ${authToken}` }
     })
       .then(r => r.json())
@@ -145,7 +144,7 @@ export function useClaims(authToken: string | null) {
     if (!authToken) return;
     setIsArchiving(true);
     try {
-      await fetch(`http://localhost:3001/api/claims/${claimId}/archive`, {
+      await fetch(`${API_BASE_URL}/api/claims/${claimId}/archive`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
         body: JSON.stringify({ archived: archive })
@@ -162,7 +161,7 @@ export function useClaims(authToken: string | null) {
   const handleDecision = async (claimId: string, decision: "approved" | "rejected") => {
     if (!authToken) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/claims/${claimId}/decision`, {
+      const res = await fetch(`${API_BASE_URL}/api/claims/${claimId}/decision`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
         body: JSON.stringify({ decision })
@@ -183,7 +182,7 @@ export function useClaims(authToken: string | null) {
     if (!newOrderId.trim() || !authToken) return false;
     setIsUpdatingOrder(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/claims/${claimId}/order`, {
+      const res = await fetch(`${API_BASE_URL}/api/claims/${claimId}/order`, {
         method: "PATCH",
         headers: { 
           "Content-Type": "application/json",

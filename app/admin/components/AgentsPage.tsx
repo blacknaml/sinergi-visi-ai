@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserPlus, Trash2, ToggleLeft, ToggleRight, X, Loader2 } from "lucide-react";
+import { API_BASE_URL } from "../../../lib/api-config";
 
 type Agent = { id: number; name: string; email: string; role: string; is_active: boolean; created_at: string; };
 
@@ -17,7 +18,7 @@ export default function AgentsPage({ token, currentAgentId }: { token: string; c
 
   const fetchAgents = async () => {
     setLoading(true);
-    const res = await fetch("http://localhost:3001/api/agents", { headers });
+    const res = await fetch(`${API_BASE_URL}/api/agents`, { headers });
     const data = await res.json();
     setAgents(Array.isArray(data) ? data : []);
     setLoading(false);
@@ -26,7 +27,7 @@ export default function AgentsPage({ token, currentAgentId }: { token: string; c
   useEffect(() => { fetchAgents(); }, []);
 
   const handleToggle = async (agent: Agent) => {
-    await fetch(`http://localhost:3001/api/agents/${agent.id}`, {
+    await fetch(`${API_BASE_URL}/api/agents/${agent.id}`, {
       method: "PATCH", headers,
       body: JSON.stringify({ is_active: !agent.is_active })
     });
@@ -35,13 +36,13 @@ export default function AgentsPage({ token, currentAgentId }: { token: string; c
 
   const handleDelete = async (id: number) => {
     if (!confirm("Hapus agen ini?")) return;
-    await fetch(`http://localhost:3001/api/agents/${id}`, { method: "DELETE", headers });
+    await fetch(`${API_BASE_URL}/api/agents/${id}`, { method: "DELETE", headers });
     fetchAgents();
   };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setSubmitting(true);
-    const res = await fetch("http://localhost:3001/api/agents", {
+    const res = await fetch(`${API_BASE_URL}/api/agents`, {
       method: "POST", headers, body: JSON.stringify(form)
     });
     const data = await res.json();

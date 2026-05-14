@@ -15,13 +15,14 @@ const socketManager = require("./sockets");
 
 // App Setup
 const app = express();
-app.use(cors({ origin: "http://localhost:3000" }));
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+app.use(cors({ origin: FRONTEND_URL }));
 app.use(express.json());
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: FRONTEND_URL,
     methods: ["GET", "POST"]
   },
   transports: ["websocket", "polling"],

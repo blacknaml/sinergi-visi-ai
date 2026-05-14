@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Message, ChatStep } from "../types/chat";
 import { evaluateClaim } from "@/lib/policy-engine";
+import { API_BASE_URL } from "@/lib/api-config";
 
 interface AnalysisParams {
   sessionId: string;
@@ -91,7 +92,7 @@ export function useClaimAnalysis({
         return;
       }
 
-      const res = await fetch("http://localhost:3001/api/analyze", {
+      const res = await fetch(`${API_BASE_URL}/api/analyze`, {
         method: "POST",
         body: formData,
       });
@@ -146,7 +147,7 @@ export function useClaimAnalysis({
           data: { status: "approved", amount: refundAmount }
         });
         
-        fetch("http://localhost:3001/api/log-refund", {
+        fetch(`${API_BASE_URL}/api/log-refund`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: currentOrder.id, amount: refundAmount, reason: analysis.description })

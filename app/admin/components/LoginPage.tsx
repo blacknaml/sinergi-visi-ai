@@ -10,6 +10,7 @@ import {
   Loader2 
 } from "lucide-react";
 import { Agent } from "../types";
+import { API_BASE_URL } from "../../../lib/api-config";
 
 interface LoginPageProps {
   onLoginSuccess: (token: string, agent: Agent) => void;
@@ -28,7 +29,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3001/api/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

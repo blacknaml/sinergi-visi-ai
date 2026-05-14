@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Shield, AlertTriangle, CheckCircle, Activity, Clock, Loader2, RefreshCw } from "lucide-react";
+import { API_BASE_URL } from "../../../lib/api-config";
 
 type Log = { id: number; agent_email: string; event_type: string; description: string; ip_address: string; success: boolean; created_at: string; };
 type Stats = { total: number; failed: number; today: number; };
@@ -24,8 +25,8 @@ export default function SecurityPage({ token }: { token: string }) {
   const fetchData = async () => {
     setLoading(true);
     const [logsRes, statsRes] = await Promise.all([
-      fetch("http://localhost:3001/api/security/logs", { headers }),
-      fetch("http://localhost:3001/api/security/stats", { headers })
+      fetch(`${API_BASE_URL}/api/security/logs`, { headers }),
+      fetch(`${API_BASE_URL}/api/security/stats`, { headers })
     ]);
     setLogs(await logsRes.json());
     setStats(await statsRes.json());

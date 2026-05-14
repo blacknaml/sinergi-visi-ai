@@ -25,6 +25,7 @@ import SecurityPage from "./components/SecurityPage";
 
 import { useClaims } from "./hooks/useClaims";
 import { Agent } from "./types";
+import { API_BASE_URL } from "../../lib/api-config";
 
 export default function AdminDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
     const agentData = localStorage.getItem("agent_data");
 
     if (token && agentData) {
-      fetch("http://localhost:3001/api/auth/me", {
+      fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.json())
@@ -101,7 +102,7 @@ export default function AdminDashboard() {
       if (selectedClaim.orderId.toLowerCase() === "unknown" || selectedClaim.orderId === "") return;
       
       try {
-        const res = await fetch(`http://localhost:3001/api/orders/${selectedClaim.orderId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/orders/${selectedClaim.orderId}`, {
           headers: { "Authorization": `Bearer ${authToken}` }
         });
         if (res.ok) {

@@ -153,6 +153,21 @@ body {
   border-top-left-radius: 0;
 }
 
+/* Markdown Styles in Chat */
+.chat-bubble-ai p, .chat-bubble-user p, .chat-bubble-agent p {
+  margin-bottom: 0.5rem;
+}
+.chat-bubble-ai p:last-child, .chat-bubble-user p:last-child, .chat-bubble-agent p:last-child {
+  margin-bottom: 0;
+}
+.chat-bubble-ai strong, .chat-bubble-agent strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+.chat-bubble-user strong {
+  font-weight: 700;
+}
+
 .status-waiting-badge {
   display: inline-flex;
   align-items: center;

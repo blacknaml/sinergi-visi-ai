@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Message } from "../../types/chat";
+import ReactMarkdown from "react-markdown";
 
 interface MessageListProps {
   messages: Message[];
@@ -43,9 +44,11 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
               "chat-bubble-ai"
             }`}>
               {(!msg.type || msg.type === "text") && (
-                <p className="text-sm leading-relaxed">
-                  {msg.content.replace(/\[INTENT:[A-Z_]+\]/g, '').trim()}
-                </p>
+                <div className="text-sm leading-relaxed prose-invert max-w-none">
+                  <ReactMarkdown>
+                    {msg.content.replace(/\[INTENT:[A-Z_]+\]/g, '').trim()}
+                  </ReactMarkdown>
+                </div>
               )}
               
               {msg.type === "upload" && (

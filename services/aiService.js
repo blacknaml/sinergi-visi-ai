@@ -1,6 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { getOrderDetails } = require("./mcpService");
-const orderCache = new Map();
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
 
@@ -76,15 +75,7 @@ async function getAiResponse(userMessage, history) {
   if (orderMatch) {
     const orderNumber = orderMatch[0].toUpperCase();
     
-    // Check cache first
-    let orderData = orderCache.get(orderNumber);
-    if (!orderData) {
-      orderData = await getOrderDetails(orderNumber);
-      if (orderData) {
-        orderCache.set(orderNumber, orderData);
-      }
-    }
-
+    const orderData = await getOrderDetails(orderNumber);
     if (orderData) {
       console.log("Order Status:", orderData.status);
       if (orderData.status === 'refund') {

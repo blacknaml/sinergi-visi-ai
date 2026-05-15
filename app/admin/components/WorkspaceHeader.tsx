@@ -27,10 +27,10 @@ export default function WorkspaceHeader({
   const [newOrderIdInput, setNewOrderIdInput] = useState("");
 
   return (
-    <div className="p-6 border-b border-white/5 flex justify-between items-center">
+    <div className="p-6 border-b flex justify-between items-center" style={{ borderColor: 'var(--card-border)' }}>
       <div>
         <h2 className="text-xl font-bold">{claim.item}</h2>
-        <div className="text-xs text-white/40 flex items-center gap-2 mt-1">
+        <div className="text-xs flex items-center gap-2 mt-1" style={{ color: 'var(--muted)' }}>
           <span>Order ID:</span>
           {editingOrderId ? (
             <div className="flex items-center gap-2">
@@ -39,7 +39,8 @@ export default function WorkspaceHeader({
                 value={newOrderIdInput}
                 onChange={(e) => setNewOrderIdInput(e.target.value)}
                 placeholder="ORD-XXXXXX"
-                className="bg-black/50 border border-white/20 rounded px-2 py-1 text-white outline-none"
+                className="border rounded px-2 py-1 outline-none"
+                style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', color: 'var(--foreground)' }}
               />
               <button 
                 onClick={async () => {
@@ -60,7 +61,7 @@ export default function WorkspaceHeader({
             </div>
           ) : (
             <>
-              <span className="font-mono bg-white/5 px-2 py-0.5 rounded">{claim.orderId}</span>
+              <span className="font-mono px-2 py-0.5 rounded" style={{ backgroundColor: 'var(--input-bg)' }}>{claim.orderId}</span>
               {(claim.orderId.toLowerCase() === "unknown" || claim.orderId === "") && (
                 <button 
                   onClick={() => {
@@ -95,8 +96,13 @@ export default function WorkspaceHeader({
           className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl transition-all disabled:opacity-50 ${
             showArchived
               ? "bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30"
-              : "bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10"
+              : "transition-colors hover:text-[var(--foreground)] border"
           }`}
+          style={{ 
+            backgroundColor: showArchived ? '' : 'var(--input-bg)',
+            borderColor: showArchived ? '' : 'var(--card-border)',
+            color: showArchived ? '' : 'var(--muted)'
+          }}
         >
           {isArchiving ? (
             <Loader2 className="w-4 h-4 animate-spin" />

@@ -11,7 +11,7 @@ interface ClaimDetailsProps {
 
 export default function ClaimDetails({ claim, setPreviewImage }: ClaimDetailsProps) {
   return (
-    <div className="w-1/2 p-6 overflow-y-auto border-r border-white/5 space-y-6">
+    <div className="w-1/2 p-6 overflow-y-auto border-r space-y-6" style={{ borderColor: 'var(--card-border)' }}>
       {/* Detail Analisis Gemini */}
       <div className="space-y-4">
         <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Detail Analisis Gemini</h3>
@@ -21,7 +21,7 @@ export default function ClaimDetails({ claim, setPreviewImage }: ClaimDetailsPro
               <CheckCircle className="text-emerald-500 w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] text-white/40 uppercase">Damage Detected</p>
+              <p className="text-[10px] uppercase" style={{ color: 'var(--muted)' }}>Damage Detected</p>
               <p className="text-sm font-bold">{claim.analysis?.damageType || claim.analysis?.detectedDamage || "Fisik/Pecah"}</p>
             </div>
           </div>
@@ -30,12 +30,12 @@ export default function ClaimDetails({ claim, setPreviewImage }: ClaimDetailsPro
               <ClipboardCheck className="text-blue-500 w-6 h-6" />
             </div>
             <div>
-              <p className="text-[10px] text-white/40 uppercase">Confidence Score</p>
+              <p className="text-[10px] uppercase" style={{ color: 'var(--muted)' }}>Confidence Score</p>
               <p className="text-sm font-bold">{((claim.analysis?.confidence || 0) * 100).toFixed(1)}%</p>
             </div>
           </div>
-          <div className="pt-2 border-t border-white/5">
-            <p className="text-[10px] text-white/40 uppercase mb-1">Alasan Review Manual</p>
+          <div className="pt-2 border-t" style={{ borderColor: 'var(--card-border)' }}>
+            <p className="text-[10px] uppercase mb-1" style={{ color: 'var(--muted)' }}>Alasan Review Manual</p>
             <div className="flex gap-2 items-start text-amber-400">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <p className="text-xs leading-relaxed italic">{claim.reason}</p>
@@ -49,7 +49,8 @@ export default function ClaimDetails({ claim, setPreviewImage }: ClaimDetailsPro
         <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Bukti Foto</h3>
         <div 
           onClick={() => setPreviewImage(claim.imageUrl || "/hero.png")}
-          className="aspect-video bg-white/5 rounded-xl border border-white/5 flex items-center justify-center overflow-hidden cursor-zoom-in group"
+          className="aspect-video rounded-xl border flex items-center justify-center overflow-hidden cursor-zoom-in group"
+          style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--card-border)' }}
         >
           <img 
             src={claim.imageUrl || "/hero.png"} 
@@ -60,24 +61,26 @@ export default function ClaimDetails({ claim, setPreviewImage }: ClaimDetailsPro
       </div>
 
       {/* Detail Pembelian */}
-      {claim.orderDetails && (
-        <div className="space-y-4 pt-4 border-t border-white/5">
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Detail Pembelian</h3>
-          </div>
+      <div className="space-y-4 pt-4 border-t" style={{ borderColor: 'var(--card-border)' }}>
+        <div className="flex items-center gap-2">
+          <ShoppingCart className="w-4 h-4 text-cyan-400" />
+          <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-widest">Detail Pembelian</h3>
+        </div>
+        
+        {claim.orderDetails ? (
           <div className="space-y-3">
             {claim.orderDetails.items?.map((item: any, idx: number) => {
-              const itemImg = `${ECOM_STORAGE_BASE}${item.product.image_path}`;
+              const itemImg = item.product?.image_path ? `${ECOM_STORAGE_BASE}${item.product.image_path}` : "/hero.png";
               return (
-                <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 flex gap-3 items-center group/item hover:bg-white/10 transition-colors">
+                <div key={idx} className="p-3 rounded-xl border flex gap-3 items-center group/item hover:bg-white/10 transition-colors" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--card-border)' }}>
                   <div 
                     onClick={() => setPreviewImage(itemImg)}
-                    className="w-12 h-12 bg-black/40 rounded-lg overflow-hidden border border-white/10 shrink-0 cursor-zoom-in relative"
+                    className="w-12 h-12 bg-black/40 rounded-lg overflow-hidden border shrink-0 cursor-zoom-in relative"
+                    style={{ borderColor: 'var(--card-border)' }}
                   >
                     <img 
                       src={itemImg} 
-                      alt={item.product.name}
+                      alt={item.product?.name || "Product"}
                       className="w-full h-full object-cover group-hover/item:scale-110 transition-transform"
                     />
                     <div className="absolute inset-0 bg-cyan-500/20 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center">
@@ -85,15 +88,19 @@ export default function ClaimDetails({ claim, setPreviewImage }: ClaimDetailsPro
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold truncate">{item.product.name}</p>
-                    <p className="text-[10px] text-white/40">Rp {Number(item.price).toLocaleString('id-ID')} x {item.quantity}</p>
+                    <p className="text-xs font-bold truncate">{item.product?.name || "Produk tidak dikenal"}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Rp {Number(item.price || 0).toLocaleString('id-ID')} x {item.quantity || 0}</p>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-4 rounded-xl border border-dashed text-center" style={{ borderColor: 'var(--card-border)', color: 'var(--muted)' }}>
+            <p className="text-xs italic">Data pesanan belum dimuat atau tidak ditemukan.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

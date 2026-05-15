@@ -33,9 +33,16 @@ export default function ChatPanel({ claim, handleSendMessage }: ChatPanelProps) 
           <>
             {claim.messages.map(msg => (
               <div key={msg.id} className={`flex ${msg.role === 'agent' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-3 rounded-xl text-sm ${
-                  msg.role === 'agent' ? 'bg-cyan-600 text-white rounded-tr-none' : 'bg-white/5 text-white/80 rounded-tl-none border border-white/10'
-                }`}>
+                <div 
+                  className={`max-w-[85%] p-3 rounded-xl text-sm border ${
+                    msg.role === 'agent' ? 'bg-cyan-600 text-white rounded-tr-none' : 'rounded-tl-none'
+                  }`}
+                  style={{ 
+                    backgroundColor: msg.role === 'agent' ? '' : 'var(--chat-ai-bg)',
+                    borderColor: msg.role === 'agent' ? '' : 'var(--chat-ai-border)',
+                    color: msg.role === 'agent' ? '' : 'var(--foreground)'
+                  }}
+                >
                   {msg.imageUrl && (
                     <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-h-48 w-auto object-contain cursor-zoom-in" />
                   )}
@@ -48,7 +55,7 @@ export default function ChatPanel({ claim, handleSendMessage }: ChatPanelProps) 
       </div>
 
       {claim.status === "active" && (
-        <div className="p-4 border-t border-white/5 bg-black/20">
+        <div className="p-4 border-t" style={{ borderColor: 'var(--card-border)', backgroundColor: 'rgba(128, 128, 128, 0.05)' }}>
           <form 
             onSubmit={(e) => {
               e.preventDefault();
@@ -62,11 +69,12 @@ export default function ChatPanel({ claim, handleSendMessage }: ChatPanelProps) 
               value={agentMessage}
               onChange={(e) => setAgentMessage(e.target.value)}
               placeholder="Balas ke pengguna..."
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+              className="flex-1 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50"
+              style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', color: 'var(--foreground)' }}
             />
             <button 
               type="submit"
-              className="p-3 bg-cyan-600 hover:bg-cyan-500 rounded-xl transition-all"
+              className="p-3 bg-cyan-600 hover:bg-cyan-500 rounded-xl transition-all text-white"
             >
               <Send className="w-5 h-5" />
             </button>

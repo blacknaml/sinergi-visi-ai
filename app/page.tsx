@@ -111,7 +111,7 @@ export default function Home() {
       </div>
 
       <footer className="text-center">
-        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em]">
+        <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-darker)' }}>
           Powered by Gemini 1.5 Flash • SinergiVisi AI Autonomous System
         </p>
       </footer>

@@ -23,8 +23,8 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
             <img src="/hero.png" alt="SinergiVisi AI Hero" className="w-full h-full object-cover" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-bold text-white">Validasi Instan. Solusi Otonom.</h2>
-            <p className="text-sm text-white/50 max-w-xs">Unggah bukti foto piring, gelas, atau peralatan rumah tangga Anda yang rusak untuk klaim kilat.</p>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Halo! Ada yang bisa kami bantu?</h2>
+            <p className="text-sm max-w-xs" style={{ color: 'var(--muted)' }}>Kami siap melayani Anda. Unggah bukti kerusakan piring atau gelas Anda untuk proses klaim yang cepat dan ramah.</p>
           </div>
         </motion.div>
       )}
@@ -54,7 +54,7 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
                     <img src={msg.imageUrl} alt="Uploaded" className="rounded-lg max-h-40 w-auto object-contain mb-2" />
                   )}
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/10 rounded-lg">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--input-bg)' }}>
                       <Camera className="w-5 h-5 text-violet-400" />
                     </div>
                     <p className="text-sm italic">{msg.data?.fileName || "File Terlampir"}</p>
@@ -78,7 +78,7 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
                     </span>
                   </div>
                   <p className="text-sm">{msg.content}</p>
-                  <div className="text-xs p-2 bg-black/20 rounded border border-white/5">
+                  <div className="text-xs p-2 rounded border" style={{ backgroundColor: 'rgba(0,0,0,0.1)', borderColor: 'var(--card-border)' }}>
                     <p>Nilai Refund: <span className="font-mono text-cyan-400">Rp {(msg.data?.amount || 0).toLocaleString('id-ID')}</span></p>
                   </div>
                 </div>
@@ -95,9 +95,9 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
           className="flex justify-start"
         >
           <div className="chat-bubble-ai px-4 py-2 flex gap-1">
-            <span className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce" />
-            <span className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce [animation-delay:0.2s]" />
-            <span className="w-1.5 h-1.5 bg-white/30 rounded-full animate-bounce [animation-delay:0.4s]" />
+            <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: 'var(--muted)' }} />
+            <span className="w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:0.2s]" style={{ backgroundColor: 'var(--muted)' }} />
+            <span className="w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:0.4s]" style={{ backgroundColor: 'var(--muted)' }} />
           </div>
         </motion.div>
       )}

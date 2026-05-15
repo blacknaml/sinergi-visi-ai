@@ -119,7 +119,7 @@ export default function AdminDashboard() {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
         <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
       </div>
     );
@@ -130,9 +130,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-[#050505] text-white overflow-hidden font-sans">
+    <div className="flex h-screen overflow-hidden font-sans" style={{ backgroundColor: 'var(--background)', color: 'var(--foreground)' }}>
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-white/5 bg-black/40 p-6 flex flex-col gap-8">
+      <aside className="w-64 border-r p-6 flex flex-col gap-8" style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--input-bg)' }}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center">
             <ClipboardCheck className="w-5 h-5 text-black" />
@@ -150,8 +150,9 @@ export default function AdminDashboard() {
               key={key}
               onClick={() => setActiveMenu(key as any)}
               className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
-                activeMenu === key ? "bg-white/10 text-cyan-400" : "text-white/40 hover:text-white"
+                activeMenu === key ? "bg-cyan-500/10 text-cyan-400" : "hover:text-[var(--foreground)]"
               }`}
+              style={{ color: activeMenu === key ? '' : 'var(--muted)' }}
             >
               <Icon className="w-5 h-5" />
               <span className="text-sm font-medium">{label}</span>
@@ -160,14 +161,14 @@ export default function AdminDashboard() {
         </nav>
 
         <div className="mt-auto">
-          <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+          <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-cyan-500 to-violet-600 rounded-lg flex items-center justify-center text-sm font-bold">
+              <div className="w-9 h-9 bg-gradient-to-br from-cyan-500 to-violet-600 rounded-lg flex items-center justify-center text-sm font-bold text-white">
                 {agent?.name?.charAt(0) || "A"}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{agent?.name}</p>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest">{agent?.role}</p>
+                <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--muted)' }}>{agent?.role}</p>
               </div>
             </div>
             <button
@@ -197,7 +198,7 @@ export default function AdminDashboard() {
               socket={socket}
             />
 
-            <section className="flex-1 flex flex-col bg-black/20">
+            <section className="flex-1 flex flex-col" style={{ backgroundColor: 'rgba(128, 128, 128, 0.05)' }}>
               {selectedClaim ? (
                 <>
                   <WorkspaceHeader 
@@ -218,8 +219,8 @@ export default function AdminDashboard() {
                           <Clock className="w-5 h-5 text-amber-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-amber-200">Menunggu Inspeksi Agen</p>
-                          <p className="text-xs text-amber-200/60 italic">Silakan tinjau bukti foto dan putuskan refund.</p>
+                          <p className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>Menunggu Inspeksi Agen</p>
+                          <p className="text-xs italic" style={{ color: 'var(--muted)' }}>Silakan tinjau bukti foto dan putuskan refund.</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -259,10 +260,10 @@ export default function AdminDashboard() {
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 opacity-20">
+                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6" style={{ color: 'var(--muted)', opacity: 0.3 }}>
                   <ClipboardCheck className="w-24 h-24" />
                   <div>
-                    <h3 className="text-2xl font-bold">Workspace Kosong</h3>
+                    <h3 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>Workspace Kosong</h3>
                     <p className="text-sm">Pilih klaim dari daftar di samping untuk memulai peninjauan.</p>
                   </div>
                 </div>

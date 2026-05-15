@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
 import "./globals.css";
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
-});
 
 export const metadata: Metadata = {
   title: "SinergiVisi AI | Autonomous Customer Support",
@@ -19,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${outfit.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <div className="bg-mesh" />
         <main className="relative min-h-screen">
           {children}

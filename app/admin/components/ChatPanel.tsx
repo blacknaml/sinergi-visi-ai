@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, Bot, User, Headset } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { Claim } from "../types";
 
 interface ChatPanelProps {
@@ -31,25 +32,49 @@ export default function ChatPanel({ claim, handleSendMessage }: ChatPanelProps) 
           </div>
         ) : (
           <>
-            {claim.messages.map(msg => (
-              <div key={msg.id} className={`flex ${msg.role === 'agent' ? 'justify-end' : 'justify-start'}`}>
-                <div 
-                  className={`max-w-[85%] p-3 rounded-xl text-sm border ${
-                    msg.role === 'agent' ? 'bg-cyan-600 text-white rounded-tr-none' : 'rounded-tl-none'
-                  }`}
-                  style={{ 
-                    backgroundColor: msg.role === 'agent' ? '' : 'var(--chat-ai-bg)',
-                    borderColor: msg.role === 'agent' ? '' : 'var(--chat-ai-border)',
-                    color: msg.role === 'agent' ? '' : 'var(--foreground)'
-                  }}
-                >
-                  {msg.imageUrl && (
-                    <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-h-48 w-auto object-contain cursor-zoom-in" />
-                  )}
-                  {msg.content.replace(/\[INTENT:[A-Z_]+\]/g, '').trim()}
-                </div>
-              </div>
-            ))}
+             {claim.messages.map(msg => (
+               <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                 <div className="flex items-center gap-2 mb-1 px-1">
+                   {msg.role === 'ai' ? (
+                     <>
+                       <Bot className="w-3 h-3 text-violet-400" />
+                       <span className="text-[10px] uppercase font-bold text-violet-400 tracking-wider">Sinergi AI</span>
+                     </>
+                   ) : msg.role === 'agent' ? (
+                     <>
+                       <Headset className="w-3 h-3 text-cyan-400" />
+                       <span className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider">Anda (Agen)</span>
+                     </>
+                   ) : (
+                     <>
+                       <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Customer</span>
+                       <User className="w-3 h-3 text-amber-400" />
+                     </>
+                   )}
+                 </div>
+                 <div 
+                   className={`max-w-[85%] p-3 rounded-xl text-sm border chat-markdown-content ${
+                     msg.role === 'user' ? 'rounded-tr-none' : 
+                     msg.role === 'agent' ? 'bg-cyan-600 text-white rounded-tl-none' : 
+                     'rounded-tl-none'
+                   }`}
+                   style={{ 
+                     backgroundColor: msg.role === 'user' ? 'var(--chat-user-bg)' : msg.role === 'ai' ? 'var(--chat-ai-bg)' : '',
+                     borderColor: msg.role === 'user' ? 'var(--chat-user-border)' : msg.role === 'ai' ? 'var(--chat-ai-border)' : '',
+                     color: (msg.role === 'agent') ? 'white' : 'var(--foreground)'
+                   }}
+                 >
+                   {msg.imageUrl && (
+                     <img src={msg.imageUrl} alt="Attachment" className="rounded-lg mb-2 max-h-48 w-auto object-contain cursor-zoom-in" />
+                   )}
+                   <div className="prose-invert max-w-none">
+                     <ReactMarkdown>
+                       {msg.content.replace(/\[INTENT:[A-Z_]+\]/g, '').trim()}
+                     </ReactMarkdown>
+                   </div>
+                 </div>
+               </div>
+             ))}
           </>
         )}
       </div>

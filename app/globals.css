@@ -40,8 +40,8 @@
     --card-border: rgba(0, 0, 0, 0.08);
     --chat-ai-bg: #ffffff;
     --chat-ai-border: rgba(0, 0, 0, 0.1);
-    --chat-user-bg: rgba(139, 92, 246, 0.1);
-    --chat-user-border: rgba(139, 92, 246, 0.2);
+    --chat-user-bg: rgba(139, 92, 246, 0.15);
+    --chat-user-border: rgba(139, 92, 246, 0.3);
     --chat-agent-bg: rgba(34, 211, 238, 0.1);
     --chat-agent-border: rgba(34, 211, 238, 0.2);
     --mesh-opacity: 0.1;
@@ -53,7 +53,7 @@
 }
 
 @theme {
-  --font-sans: var(--font-outfit), Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
@@ -166,6 +166,18 @@ body {
 }
 .chat-bubble-user strong {
   font-weight: 700;
+}
+
+.chat-markdown-content p {
+  margin-bottom: 0.5rem;
+}
+.chat-markdown-content p:last-child {
+  margin-bottom: 0;
+}
+.chat-markdown-content strong {
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.1);
 }
 
 .status-waiting-badge {

@@ -39,10 +39,10 @@ export default function SecurityPage({ token }: { token: string }) {
     <div className="flex-1 p-8 overflow-y-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-white">Log Keamanan</h2>
-          <p className="text-white/40 text-sm mt-1">Audit trail aktivitas agen dan sistem</p>
+          <h2 className="text-2xl font-bold">Log Keamanan</h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Audit trail aktivitas agen dan sistem</p>
         </div>
-        <button onClick={fetchData} className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm rounded-xl transition-all">
+        <button onClick={fetchData} className="flex items-center gap-2 px-4 py-2 border rounded-xl transition-all" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--card-border)', color: 'var(--foreground)' }}>
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </div>
@@ -55,13 +55,13 @@ export default function SecurityPage({ token }: { token: string }) {
             { label: "Login Gagal", value: stats.failed, icon: AlertTriangle, color: "text-red-400", bg: "bg-red-500/10" },
             { label: "Event Hari Ini", value: stats.today, icon: Clock, color: "text-violet-400", bg: "bg-violet-500/10" },
           ].map(({ label, value, icon: Icon, color, bg }) => (
-            <div key={label} className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 flex items-center gap-4">
+            <div key={label} className="border rounded-2xl p-6 flex items-center gap-4" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
               <div className={`w-12 h-12 ${bg} rounded-xl flex items-center justify-center`}>
                 <Icon className={`w-6 h-6 ${color}`} />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{value}</p>
-                <p className="text-xs text-white/40">{label}</p>
+                <p className="text-2xl font-bold">{value}</p>
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>{label}</p>
               </div>
             </div>
           ))}
@@ -72,27 +72,27 @@ export default function SecurityPage({ token }: { token: string }) {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 text-cyan-500 animate-spin" /></div>
       ) : (
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
+        <div className="rounded-2xl overflow-hidden border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10">
+              <tr className="border-b" style={{ borderColor: 'var(--card-border)' }}>
                 {["Waktu", "Email", "Event", "Keterangan", "IP", "Status"].map(h => (
-                  <th key={h} className="text-left px-5 py-4 text-xs font-bold text-white/40 uppercase tracking-widest">{h}</th>
+                  <th key={h} className="text-left px-5 py-4 text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--muted)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {logs.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-16 text-white/30"><Shield className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>Belum ada log aktivitas</p></td></tr>
+                <tr><td colSpan={6} className="text-center py-16"><Shield className="w-12 h-12 mx-auto mb-3 opacity-20" /><p style={{ color: 'var(--muted)' }}>Belum ada log aktivitas</p></td></tr>
               ) : logs.map(log => {
-                const ev = EVENT_LABELS[log.event_type] || { label: log.event_type, color: "text-white/60 bg-white/10" };
+                const ev = EVENT_LABELS[log.event_type] || { label: log.event_type, color: "bg-gray-500/10" };
                 return (
-                  <tr key={log.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                    <td className="px-5 py-3 text-xs text-white/40 whitespace-nowrap">{new Date(log.created_at).toLocaleString("id-ID")}</td>
-                    <td className="px-5 py-3 text-xs font-mono text-white/70">{log.agent_email}</td>
+                  <tr key={log.id} className="border-b transition-colors" style={{ borderColor: 'var(--card-border)' }}>
+                    <td className="px-5 py-3 text-xs whitespace-nowrap" style={{ color: 'var(--muted)' }}>{new Date(log.created_at).toLocaleString("id-ID")}</td>
+                    <td className="px-5 py-3 text-xs font-mono">{log.agent_email}</td>
                     <td className="px-5 py-3"><span className={`text-xs px-2 py-1 rounded-full font-bold ${ev.color}`}>{ev.label}</span></td>
-                    <td className="px-5 py-3 text-xs text-white/60 max-w-[180px] truncate">{log.description}</td>
-                    <td className="px-5 py-3 text-xs font-mono text-white/40">{log.ip_address}</td>
+                    <td className="px-5 py-3 text-xs max-w-[180px] truncate" style={{ color: 'var(--muted)' }}>{log.description}</td>
+                    <td className="px-5 py-3 text-xs font-mono" style={{ color: 'var(--muted)' }}>{log.ip_address}</td>
                     <td className="px-5 py-3">
                       {log.success
                         ? <CheckCircle className="w-4 h-4 text-emerald-400" />

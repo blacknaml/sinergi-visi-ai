@@ -23,8 +23,8 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
             <img src="/hero.png" alt="SinergiVisi AI Hero" className="w-full h-full object-cover" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Halo! Ada yang bisa kami bantu?</h2>
-            <p className="text-sm max-w-xs" style={{ color: 'var(--muted)' }}>Kami siap melayani Anda. Unggah bukti kerusakan piring atau gelas Anda untuk proses klaim yang cepat dan ramah.</p>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Sinergi AI & Manusia untuk Anda</h2>
+            <p className="text-sm max-w-xs" style={{ color: 'var(--muted)' }}>Dapatkan layanan pelanggan terbaik dengan perpaduan kecerdasan AI dan empati tim agen kami. Kami siap membantu klaim Anda dengan cepat dan personal.</p>
           </div>
         </motion.div>
       )}

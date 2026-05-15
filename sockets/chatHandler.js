@@ -109,7 +109,7 @@ module.exports = (io, socket) => {
         if (extractedOrderId) {
           try {
             const orderData = await getOrderDetails(extractedOrderId);
-            if (orderData && Array.isArray(orderData.items) && orderData.items.length > 0) {
+            if (orderData && orderData.status !== "refund" && orderData.status === "done" && Array.isArray(orderData.items) && orderData.items.length > 0) {
               orderItems = orderData.items.map(i => ({
                 name: i.product.name,
                 price: i.price

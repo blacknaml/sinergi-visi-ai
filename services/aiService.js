@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { getOrderDetails } = require("./mcpService");
+const orderCache = new Map();
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
 
@@ -24,13 +25,16 @@ Gaya bahasa: Professional, hangat, dan solutif.
 ## TIPE B: Klaim Kerusakan Barang (ALUR WAJIB)
 Jika user ingin komplain/klaim barang rusak, Anda WAJIB mengikuti urutan ini:
 1. **Identifikasi**: Minta Nomor Order (format: ORD-XXXXXX).
-2. **Konfirmasi**: Jika valid, sebutkan isi item dalam pesanan tersebut.
-3. **Validasi Kerusakan**: 
+2. **Cek Status Finansial/Order**:
+   - Jika data order menunjukkan "SUDAH DIREFUND", maka order tidak valid dan sampaikan dengan sopan bahwa dana telah dikembalikan.
+   - Jika data order "BELUM DISELESAIKAN" (masih dalam pengiriman/proses), maka order tidak valid dan ingatkan user bahwa statusnya belum selesai.
+3. **Konfirmasi**: Jika valid, sebutkan isi item dalam pesanan tersebut.
+4. **Validasi Kerusakan**: 
    - Tanyakan item mana yang rusak & alasan kerusakannya.
    - Pastikan item ada di daftar pesanan.
    - Output kode: [INTENT:REQUEST_CLAIM_ITEM]
-4. **Dokumentasi**: 
-   - HANYA setelah step 3 selesai, minta foto bukti kerusakan.
+5. **Dokumentasi**: 
+   - HANYA setelah step 4 selesai, minta foto bukti kerusakan.
    - Output kode: [INTENT:REQUEST_PHOTO]
 
 # RULES & CONSTRAINTS
@@ -70,12 +74,35 @@ async function getAiResponse(userMessage, history) {
   const orderMatch = userMessage.match(/ORD-[A-Z0-9]+/i);
   let orderInfo = "";
   if (orderMatch) {
-    const orderData = await getOrderDetails(orderMatch[0]);
+    const orderNumber = orderMatch[0].toUpperCase();
+    
+    // Check cache first
+    let orderData = orderCache.get(orderNumber);
+    if (!orderData) {
+      orderData = await getOrderDetails(orderNumber);
+      if (orderData) {
+        orderCache.set(orderNumber, orderData);
+      }
+    }
+
     if (orderData) {
-      const items = orderData.items.map(i => `- ${i.product.name} (Rp ${i.price})`).join("\n");
-      orderInfo = `\nDATA ORDER DITEMUKAN (${orderMatch[0]}):\n${items}\nSilakan konfirmasi produk mana yang bermasalah.`;
+      console.log("Order Status:", orderData.status);
+      if (orderData.status === 'refund') {
+        orderInfo = `\nDATA ORDER SUDAH DIREFUND untuk ${orderNumber}.`;  
+      } else if (orderData.status !== 'done') {
+        orderInfo = `\nDATA ORDER BELUM DISELESAIKAN untuk ${orderNumber} dengan status ${orderData.status}.`;
+      } else {
+        // Efficient item list generation
+        let itemsString = "";
+        if (orderData.items && Array.isArray(orderData.items)) {
+          for (const item of orderData.items) {
+            itemsString += `- ${item.product?.name || 'Produk'} (Rp ${item.price})\n`;
+          }
+        }
+        orderInfo = `\nDATA ORDER DITEMUKAN (${orderNumber}):\n${itemsString}Silakan konfirmasi produk mana yang bermasalah.`;
+      }
     } else {
-      orderInfo = `\nDATA ORDER TIDAK DITEMUKAN untuk ${orderMatch[0]}. Mohon pastikan nomor order benar.`;
+      orderInfo = `\nDATA ORDER TIDAK DITEMUKAN untuk ${orderNumber}. Mohon pastikan nomor order benar.`;
     }
   }
 

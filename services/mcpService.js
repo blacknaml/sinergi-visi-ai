@@ -60,10 +60,32 @@ async function reportClaimToMCP(orderNumber, reason) {
   }
 }
 
+/**
+ * Fetch products catalog from eCommerce system
+ */
+async function getProducts() {
+  try {
+    const response = await fetch(`${ECOM_API_BASE}/products`, {
+      headers: {
+        'X-MCP-Token': MCP_TOKEN,
+        'Accept': 'application/json'
+      }
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.message === "Katalog produk tidak ditemukan") return null;
+    return data;
+  } catch (error) {
+    console.error("Error fetching order:", orderNumber, error.message);
+    return null;
+  }
+}
+
 module.exports = {
   ECOM_API_BASE,
   ECOM_STORAGE_BASE,
   MCP_TOKEN,
   getOrderDetails,
-  reportClaimToMCP
+  reportClaimToMCP,
+  getProducts
 };

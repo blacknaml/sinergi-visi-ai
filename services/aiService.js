@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { getOrderDetails } = require("./mcpService");
+const { getOrderDetails, getProducts } = require("./mcpService");
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
 
@@ -7,6 +7,7 @@ const KNOWLEDGE_BASE_MINI = `
 # ROLE
 Anda adalah Senior CS Agent SinergiVisi (Toko Pecah Belah Premium).
 Gaya bahasa: Professional, hangat, dan solutif.
+Kemampuan bahasa: Bahasa Indonesia dan Bahasa Inggris.
 
 # KNOWLEDGE BASE (Informasi Perusahaan)
 - Produk: Koleksi pecah belah premium (Piring keramik, Gelas kristal, Set peralatan makan mewah).
@@ -41,6 +42,7 @@ Jika user ingin komplain/klaim barang rusak, Anda WAJIB mengikuti urutan ini:
 - Jika user bertanya hal di luar perusahaan, arahkan kembali dengan sopan bahwa Anda hanya melayani seputar SinergiVisi.
 - Selalu prioritaskan empati jika user melaporkan barang rusak.
 - Gunakan format Markdown (seperti **teks** untuk tebal atau *teks* untuk miring) untuk menekankan informasi penting seperti nomor order, status, atau instruksi kritis agar mudah dibaca oleh pelanggan.
+- Selalu utamakan empati dan sopan santun kepada user.
 
 # CONTEXT REASONING (ANALISIS KERUSAKAN)
 Anda diberikan "RIWAYAT PESAN USER" yang berisi seluruh percakapan mereka.
@@ -73,6 +75,8 @@ async function getAiResponse(userMessage, history) {
   // Coba cari Nomor Order di pesan terakhir (Format ORD-...)
   const orderMatch = userMessage.match(/ORD-[A-Z0-9]+/i);
   let orderInfo = "";
+  let productCatalog = "";
+
   if (orderMatch) {
     const orderNumber = orderMatch[0].toUpperCase();
     
@@ -88,7 +92,7 @@ async function getAiResponse(userMessage, history) {
         let itemsString = "";
         if (orderData.items && Array.isArray(orderData.items)) {
           for (const item of orderData.items) {
-            itemsString += `- ${item.product?.name || 'Produk'} (Rp ${item.price})\n`;
+            itemsString += `- ${item.product?.name || 'Produk'} (Rp ${item.price}) (${item.description})\n`;
           }
         }
         orderInfo = `\nDATA ORDER DITEMUKAN (${orderNumber}):\n${itemsString}Silakan konfirmasi produk mana yang bermasalah.`;
@@ -98,11 +102,17 @@ async function getAiResponse(userMessage, history) {
     }
   }
 
+  const webCatalog = await getProducts();
+  console.log("Web catalog: ", webCatalog);
+  if(webCatalog) {
+    productCatalog = `\n# KNOWLEDGE BASE (Katalog Produk):\n${webCatalog.map(p => `- ${p.name} (Rp ${p.price})`).join("\n")}`;
+  }
+
   const historyText = history.length > 0
     ? history.map(m => `${m.role === "user" ? "Customer" : "AI"}: ${m.content}`).join("\n")
     : "";
 
-  const fullPrompt = `${KNOWLEDGE_BASE_MINI}${orderInfo}
+  const fullPrompt = `${KNOWLEDGE_BASE_MINI}${productCatalog}${orderInfo}
 
 ${historyText ? `Riwayat percakapan:\n${historyText}\n` : ""}Customer: ${userMessage}
 AI:`;

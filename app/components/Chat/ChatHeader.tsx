@@ -10,17 +10,17 @@ interface ChatHeaderProps {
 
 export default function ChatHeader({ chatStatus, onNewChat }: ChatHeaderProps) {
   return (
-    <header className="flex items-center justify-between mb-8">
+    <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-[#cda434] to-[#fde047] rounded-lg flex items-center justify-center shadow-lg shadow-[#cda434]/20">
-          <Gem className="text-white w-6 h-6" />
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden shadow-lg shadow-[#cda434]/20 bg-white border border-[#cda434]/20 shrink-0">
+          <img src="/logo.png" alt="Sinergi Visi Logo" className="w-full h-full object-cover scale-[1.4] origin-[50%_40%]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold premium-gradient-text">SinergiVisi AI</h1>
-          <p className="text-xs" style={{ color: 'var(--muted)' }}>Autonomous Support Agent</p>
+          <h1 className="text-xl md:text-2xl font-bold premium-gradient-text leading-tight">SinergiVisi AI</h1>
+          <p className="text-[10px] md:text-xs" style={{ color: 'var(--muted)' }}>Layanan Pelanggan Premium</p>
         </div>
       </div>
-      <div className="flex items-center flex-wrap justify-end gap-2 md:gap-4 text-xs" style={{ color: 'var(--muted-darker)' }}>
+      <div className="flex items-center flex-wrap sm:justify-end gap-2 md:gap-4 text-[10px] md:text-xs" style={{ color: 'var(--muted-darker)' }}>
         {chatStatus === "waiting" && (
           <div className="status-waiting-badge">
             <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />

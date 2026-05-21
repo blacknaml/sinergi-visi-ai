@@ -135,8 +135,8 @@ export default function AdminDashboard() {
       {/* Sidebar Navigation */}
       <aside className="w-64 border-r p-6 flex flex-col gap-8" style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--input-bg)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#cda434] to-[#fde047] rounded flex items-center justify-center shadow-lg shadow-[#cda434]/20">
-            <Gem className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded overflow-hidden shadow-lg shadow-[#cda434]/20 bg-white border border-[#cda434]/20 shrink-0">
+            <img src="/logo.png" alt="Sinergi Visi Logo" className="w-full h-full object-cover scale-[1.4] origin-[50%_40%]" />
           </div>
           <h1 className="font-bold text-lg tracking-tight">SinergiVisi <span className="text-[#cda434]">Admin</span></h1>
         </div>

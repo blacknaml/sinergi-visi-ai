@@ -17,7 +17,7 @@ export default function ChatHeader({ chatStatus, onNewChat }: ChatHeaderProps) {
         </div>
         <div>
           <h1 className="text-xl md:text-2xl font-bold premium-gradient-text leading-tight">SinergiVisi AI</h1>
-          <p className="text-[10px] md:text-xs" style={{ color: 'var(--muted)' }}>Layanan Pelanggan Premium</p>
+          <p className="text-[10px] md:text-xs" style={{ color: 'var(--muted)' }}>Layanan Pelanggan</p>
         </div>
       </div>
       <div className="flex items-center flex-wrap sm:justify-end gap-2 md:gap-4 text-[10px] md:text-xs" style={{ color: 'var(--muted-darker)' }}>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
+  Gem,
   ShieldCheck, 
   Eye, 
   EyeOff, 
@@ -54,8 +55,8 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
     <div className="min-h-screen flex items-center justify-center p-4 transition-colors duration-500" style={{ backgroundColor: 'var(--background)' }}>
       {/* Background glow effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl opacity-50" />
-        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-violet-500/5 rounded-full blur-3xl opacity-50" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#cda434]/5 rounded-full blur-3xl opacity-50" />
+        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-[#94a3b8]/5 rounded-full blur-3xl opacity-50" />
       </div>
 
       <motion.div
@@ -66,8 +67,8 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       >
         <div className="border rounded-3xl p-8 backdrop-blur-xl shadow-2xl" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20 mb-4">
-              <ShieldCheck className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-gradient-to-br from-[#cda434] to-[#fde047] rounded-2xl flex items-center justify-center shadow-lg shadow-[#cda434]/20 mb-4">
+              <Gem className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">SinergiVisi</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Agent Dashboard — Masuk untuk Melanjutkan</p>
@@ -127,7 +128,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-[#cda434] to-[#d4af37] hover:from-[#b8932f] hover:to-[#be9d31] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all duration-300 shadow-lg shadow-[#cda434]/20 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>

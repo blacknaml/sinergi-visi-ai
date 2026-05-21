@@ -1,6 +1,6 @@
 "use client";
 
-import { Zap, ShieldCheck, Package, ArrowRight } from "lucide-react";
+import { Gem, ShieldCheck, Package, ArrowRight } from "lucide-react";
 import { ChatStatus } from "../../types/chat";
 
 interface ChatHeaderProps {
@@ -12,8 +12,8 @@ export default function ChatHeader({ chatStatus, onNewChat }: ChatHeaderProps) {
   return (
     <header className="flex items-center justify-between mb-8">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-violet-500/20">
-          <Zap className="text-white w-6 h-6" />
+        <div className="w-10 h-10 bg-gradient-to-br from-[#cda434] to-[#fde047] rounded-lg flex items-center justify-center shadow-lg shadow-[#cda434]/20">
+          <Gem className="text-white w-6 h-6" />
         </div>
         <div>
           <h1 className="text-2xl font-bold premium-gradient-text">SinergiVisi AI</h1>

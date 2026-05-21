@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { 
+  Gem,
   Users, 
   ClipboardCheck, 
   LayoutDashboard,
@@ -134,10 +135,10 @@ export default function AdminDashboard() {
       {/* Sidebar Navigation */}
       <aside className="w-64 border-r p-6 flex flex-col gap-8" style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--input-bg)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center">
-            <ClipboardCheck className="w-5 h-5 text-black" />
+          <div className="w-8 h-8 bg-gradient-to-br from-[#cda434] to-[#fde047] rounded flex items-center justify-center shadow-lg shadow-[#cda434]/20">
+            <Gem className="w-5 h-5 text-white" />
           </div>
-          <h1 className="font-bold text-lg tracking-tight">SinergiVisi <span className="text-cyan-400">Admin</span></h1>
+          <h1 className="font-bold text-lg tracking-tight">SinergiVisi <span className="text-[#cda434]">Admin</span></h1>
         </div>
 
         <nav className="space-y-2">
@@ -163,7 +164,7 @@ export default function AdminDashboard() {
         <div className="mt-auto">
           <div className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-cyan-500 to-violet-600 rounded-lg flex items-center justify-center text-sm font-bold text-white">
+              <div className="w-9 h-9 bg-gradient-to-br from-[#cda434] to-[#fde047] rounded-lg flex items-center justify-center text-sm font-bold text-white shadow-md shadow-[#cda434]/20">
                 {agent?.name?.charAt(0) || "A"}
               </div>
               <div className="flex-1 min-w-0">

@@ -20,7 +20,7 @@ export default function ChatHeader({ chatStatus, onNewChat }: ChatHeaderProps) {
           <p className="text-[10px] md:text-xs" style={{ color: 'var(--muted)' }}>Layanan Pelanggan</p>
         </div>
       </div>
-      <div className="flex items-center flex-wrap sm:justify-end gap-2 md:gap-4 text-[10px] md:text-xs" style={{ color: 'var(--muted-darker)' }}>
+      <div className="flex items-center flex-wrap justify-end gap-2 md:gap-4 text-[10px] md:text-xs w-full sm:w-auto" style={{ color: 'var(--muted-darker)' }}>
         {chatStatus === "waiting" && (
           <div className="status-waiting-badge">
             <span className="w-2 h-2 bg-amber-500 rounded-full animate-ping" />

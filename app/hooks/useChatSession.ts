@@ -8,7 +8,7 @@ export function useChatSession() {
     {
       id: "1",
       role: "ai",
-      content: "Halo! Saya SinergiVisi AI. Ada yang bisa saya bantu hari ini? Anda bisa bertanya tentang produk, pengiriman, atau melaporkan kendala pada pesanan Anda.",
+      content: "Halo! Saya SinergiVisi CS. Ada yang bisa saya bantu hari ini? Anda bisa bertanya tentang produk, pengiriman, atau melaporkan kendala pada pesanan Anda.",
       type: "text",
     },
   ]);

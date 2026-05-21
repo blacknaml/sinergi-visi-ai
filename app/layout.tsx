@@ -3,7 +3,7 @@ import "./globals.css";
 
 
 export const metadata: Metadata = {
-  title: "SinergiVisi AI | Autonomous Customer Support",
+  title: "SinergiVisi CS | Autonomous Customer Support",
   description: "Instant claim validation for household glassware using Gemini 3 Flash.",
 };
 

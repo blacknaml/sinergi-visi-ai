@@ -76,8 +76,8 @@ body {
 .premium-gradient-text {
   background-clip: text;
   -webkit-background-clip: text;
-  color: transparent;
-  background-image: linear-gradient(to right, #cda434, #d4af37, #94a3b8);
+  color: var(--primary);
+  /* background-image: linear-gradient(to right, #cda434, #d4af37, #94a3b8); */
 }
 
 .glow-button {

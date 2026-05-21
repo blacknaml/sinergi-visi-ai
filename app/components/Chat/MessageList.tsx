@@ -25,7 +25,9 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Sinergi AI & Manusia untuk Anda</h2>
-            <p className="text-sm max-w-xs" style={{ color: 'var(--muted)' }}>Dapatkan layanan pelanggan terbaik dengan perpaduan kecerdasan AI dan empati tim agen kami. Kami siap membantu klaim Anda dengan cepat dan personal.</p>
+            <p className="text-sm max-w-xs" style={{ color: 'var(--muted)' }}>
+              Dapatkan layanan pelanggan terbaik dengan perpaduan kecerdasan AI dan empati tim agen kami. Kami siap membantu klaim Anda dengan cepat dan personal.
+            </p>
           </div>
         </motion.div>
       )}

@@ -16,7 +16,7 @@ export default function ChatHeader({ chatStatus, onNewChat }: ChatHeaderProps) {
           <img src="/logo.png" alt="Sinergi Visi Logo" className="w-full h-full object-cover scale-[1.4] origin-[50%_40%]" />
         </div>
         <div>
-          <h1 className="text-xl md:text-2xl font-bold premium-gradient-text leading-tight">SinergiVisi AI</h1>
+          <h1 className="text-xl md:text-2xl font-bold premium-gradient-text leading-tight">Sinergi Visi CS</h1>
           <p className="text-[10px] md:text-xs" style={{ color: 'var(--muted)' }}>Layanan Pelanggan</p>
         </div>
       </div>

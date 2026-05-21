@@ -37,8 +37,8 @@ export default function ChatPanel({ claim, handleSendMessage }: ChatPanelProps) 
                  <div className="flex items-center gap-2 mb-1 px-1">
                    {msg.role === 'ai' ? (
                      <>
-                       <Bot className="w-3 h-3 text-violet-400" />
-                       <span className="text-[10px] uppercase font-bold text-violet-400 tracking-wider">Sinergi AI</span>
+                       <Bot className="w-3 h-3 text-amber-500" />
+                       <span className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">Sinergi AI</span>
                      </>
                    ) : msg.role === 'agent' ? (
                      <>

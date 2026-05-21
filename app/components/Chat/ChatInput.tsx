@@ -33,9 +33,9 @@ export default function ChatInput({ step, chatStatus, onSendMessage, onFileUploa
       <form onSubmit={handleSubmit} className="flex gap-3">
         {step === "upload" ? (
           <div className="flex-1 flex gap-2">
-            <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 rounded-xl cursor-pointer transition-all duration-300 group">
-              <UploadCloud className="w-5 h-5 text-violet-400 group-hover:scale-110 transition-transform" />
-              <span className="text-sm font-medium">Klik untuk Unggah Foto Bukti</span>
+            <label className="flex-1 flex items-center justify-center gap-2 p-3 bg-amber-600/10 hover:bg-amber-600/20 border border-amber-500/30 rounded-xl cursor-pointer transition-all duration-300 group">
+              <UploadCloud className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Klik untuk Unggah Foto Bukti</span>
               <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
             </label>
             <button 
@@ -53,7 +53,7 @@ export default function ChatInput({ step, chatStatus, onSendMessage, onFileUploa
             <button 
               type="button"
               onClick={() => setStep("upload")}
-              className="p-3 border rounded-xl text-violet-400 transition-colors"
+              className="p-3 border rounded-xl text-amber-500 transition-colors"
               style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)' }}
               title="Unggah Foto"
             >
@@ -68,14 +68,15 @@ export default function ChatInput({ step, chatStatus, onSendMessage, onFileUploa
                 step === "order_id" ? "Masukkan Nomor Order (SV-XXXX)..." : 
                 "Ketik pesan..."
               }
-              className="flex-1 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-violet-500/50 transition-colors"
+              className="flex-1 border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500/50 transition-colors"
               style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', color: 'var(--foreground)' }}
               disabled={step === "analyzing"}
             />
             <button
               type="submit"
               disabled={!inputValue.trim() || step === "analyzing"}
-              className="p-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl glow-button"
+              className="p-3 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl glow-button"
+              style={{ backgroundColor: '#cda434', color: 'white' }}
             >
               <Send className="w-5 h-5 text-white" />
             </button>

@@ -20,7 +20,7 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center justify-center py-10 text-center space-y-6"
         >
-          <div className="relative w-64 h-64 rounded-full overflow-hidden border-2 border-violet-500/30 shadow-[0_0_50px_rgba(139,92,246,0.2)]">
+          <div className="relative w-64 h-64 rounded-full overflow-hidden border-2 border-amber-500/30 shadow-[0_0_50px_rgba(205,164,52,0.2)]">
             <img src="/hero.png" alt="SinergiVisi AI Hero" className="w-full h-full object-cover" />
           </div>
           <div className="space-y-2">
@@ -58,7 +58,7 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
                   )}
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--input-bg)' }}>
-                      <Camera className="w-5 h-5 text-violet-400" />
+                      <Camera className="w-5 h-5 text-amber-500" />
                     </div>
                     <p className="text-sm italic">{msg.data?.fileName || "File Terlampir"}</p>
                   </div>

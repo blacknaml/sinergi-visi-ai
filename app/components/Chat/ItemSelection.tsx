@@ -19,18 +19,19 @@ export default function ItemSelection({ orderItems, onSelectItem, onClose }: Ite
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 8 }}
-        className="px-4 pt-3 pb-2 border-t border-white/5"
+        className="px-4 pt-3 pb-2 border-t"
+        style={{ borderColor: 'var(--card-border)' }}
       >
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] text-white/40 uppercase tracking-widest">Pilih item yang bermasalah:</p>
-          <button onClick={onClose} className="text-[10px] text-white/20 hover:text-white/50 transition-colors">✕ tutup</button>
+          <p className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--muted)' }}>Pilih item yang bermasalah:</p>
+          <button onClick={onClose} className="text-[10px] transition-colors hover:text-[var(--foreground)]" style={{ color: 'var(--muted-darker)' }}>✕ tutup</button>
         </div>
         <div className="flex flex-wrap gap-2">
           {orderItems.map((item, idx) => (
             <button
               key={idx}
               onClick={() => onSelectItem(item)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/40 rounded-full transition-all duration-200 text-violet-300 hover:text-white hover:border-violet-400/60 group"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-600/10 hover:bg-amber-600/20 border border-amber-500/40 rounded-full transition-all duration-200 text-amber-700 hover:text-amber-800 hover:border-amber-500/60 group"
             >
               <Package className="w-3 h-3 opacity-60 group-hover:opacity-100" />
               {item.name}

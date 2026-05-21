@@ -1,54 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  /* Default: Dark Mode */
-  --background: #050505;
-  --foreground: #ffffff;
-  --primary: #8b5cf6;
-  --primary-glow: radial-gradient(rgba(139, 92, 246, 0.5), rgba(139, 92, 246, 0));
-  --secondary: #06b6d4;
-  --accent: #f43f5e;
+  /* Default: Elegant Light Mode (Toko Pecah Belah) */
+  --background: #fdfbf7; /* Pearl/warm white */
+  --foreground: #292524; /* stone-800 */
+  --primary: #cda434; /* Elegant Gold */
+  --primary-glow: radial-gradient(rgba(205, 164, 52, 0.3), rgba(205, 164, 52, 0));
+  --secondary: #94a3b8; /* Soft blue-grey */
+  --accent: #e11d48;
   
-  --muted: #94a3b8; /* slate-400 */
-  --muted-darker: #64748b; /* slate-500 */
-  --card-bg: rgba(20, 20, 20, 0.8);
-  --card-border: rgba(255, 255, 255, 0.1);
-  --chat-ai-bg: rgba(255, 255, 255, 0.05);
-  --chat-ai-border: rgba(255, 255, 255, 0.1);
-  --chat-user-bg: rgba(139, 92, 246, 0.2);
-  --chat-user-border: rgba(139, 92, 246, 0.3);
-  --chat-agent-bg: rgba(34, 211, 238, 0.15);
-  --chat-agent-border: rgba(34, 211, 238, 0.3);
-  --mesh-opacity: 0.15;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
-  --input-bg: rgba(255, 255, 255, 0.05);
-  --input-border: rgba(255, 255, 255, 0.1);
+  --muted: #78716c; /* stone-500 */
+  --muted-darker: #a8a29e; /* stone-400 */
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(255, 255, 255, 0.8);
+  --chat-ai-bg: rgba(255, 255, 255, 0.8);
+  --chat-ai-border: rgba(205, 164, 52, 0.3);
+  --chat-user-bg: rgba(205, 164, 52, 0.15);
+  --chat-user-border: rgba(205, 164, 52, 0.4);
+  --chat-agent-bg: rgba(148, 163, 184, 0.15);
+  --chat-agent-border: rgba(148, 163, 184, 0.3);
+  --mesh-opacity: 0.4;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.1);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.2);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: rgba(0, 0, 0, 0.1);
 }
 
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root {
-    --background: #f8fafc;
-    --foreground: #0f172a;
-    --primary: #7c3aed;
-    --secondary: #0891b2;
-    --accent: #e11d48;
+    --background: #1c1917; /* stone-900 */
+    --foreground: #f5f5f4; /* stone-100 */
+    --primary: #d4af37; /* Gold */
+    --primary-glow: radial-gradient(rgba(212, 175, 55, 0.3), rgba(212, 175, 55, 0));
+    --secondary: #94a3b8;
+    --accent: #f43f5e;
     
-    --muted: #64748b; /* slate-500 */
-    --muted-darker: #94a3b8; /* slate-400 */
-    --card-bg: #ffffff;
-    --card-border: rgba(0, 0, 0, 0.08);
-    --chat-ai-bg: #ffffff;
-    --chat-ai-border: rgba(0, 0, 0, 0.1);
-    --chat-user-bg: rgba(139, 92, 246, 0.15);
-    --chat-user-border: rgba(139, 92, 246, 0.3);
-    --chat-agent-bg: rgba(34, 211, 238, 0.1);
-    --chat-agent-border: rgba(34, 211, 238, 0.2);
-    --mesh-opacity: 0.1;
-    --scrollbar-thumb: rgba(0, 0, 0, 0.1);
-    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.2);
-    --input-bg: #ffffff;
-    --input-border: rgba(0, 0, 0, 0.1);
+    --muted: #a8a29e;
+    --muted-darker: #78716c;
+    --card-bg: rgba(41, 37, 36, 0.7);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --chat-ai-bg: rgba(41, 37, 36, 0.8);
+    --chat-ai-border: rgba(212, 175, 55, 0.3);
+    --chat-user-bg: rgba(212, 175, 55, 0.15);
+    --chat-user-border: rgba(212, 175, 55, 0.4);
+    --chat-agent-bg: rgba(148, 163, 184, 0.1);
+    --chat-agent-border: rgba(148, 163, 184, 0.2);
+    --mesh-opacity: 0.15;
+    --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -76,7 +77,7 @@ body {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  background-image: linear-gradient(to right, #a78bfa, #f472b6, #22d3ee);
+  background-image: linear-gradient(to right, #cda434, #d4af37, #94a3b8);
 }
 
 .glow-button {
@@ -86,7 +87,7 @@ body {
 }
 
 .glow-button:hover {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 15px rgba(205, 164, 52, 0.2);
 }
 
 .glow-button:active {
@@ -137,9 +138,9 @@ body {
   height: 100%;
   z-index: -1;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(139, 92, 246, var(--mesh-opacity)) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(6, 182, 212, var(--mesh-opacity)) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(244, 63, 94, calc(var(--mesh-opacity) * 0.7)) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(205, 164, 52, var(--mesh-opacity)) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(148, 163, 184, var(--mesh-opacity)) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(244, 63, 94, calc(var(--mesh-opacity) * 0.3)) 0px, transparent 50%);
   filter: blur(100px);
 }
 
@@ -147,7 +148,7 @@ body {
   background: var(--chat-agent-bg);
   backdrop-filter: blur(24px);
   border: 1px solid var(--chat-agent-border);
-  border-left: 2px solid #22d3ee;
+  border-left: 2px solid var(--secondary);
   padding: 1rem;
   border-radius: 1rem;
   border-top-left-radius: 0;

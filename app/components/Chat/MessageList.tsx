@@ -20,7 +20,7 @@ export default function MessageList({ messages, isTyping, messagesEndRef }: Mess
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center justify-center py-10 text-center space-y-6"
         >
-          <div className="relative w-64 h-64 rounded-full overflow-hidden border-2 border-amber-500/30 shadow-[0_0_50px_rgba(205,164,52,0.2)]">
+          <div className="relative w-32 h-32 sm:w-64 sm:h-64 rounded-full overflow-hidden border-2 border-amber-500/30 shadow-[0_0_50px_rgba(205,164,52,0.2)]">
             <img src="/hero.png" alt="SinergiVisi AI Hero" className="w-full h-full object-cover" />
           </div>
           <div className="space-y-2">

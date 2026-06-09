@@ -68,7 +68,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
         <div className="border rounded-3xl p-8 backdrop-blur-xl shadow-2xl" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
           <div className="flex flex-col items-center mb-8">
             <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-lg shadow-[#cda434]/20 mb-4 bg-white border border-[#cda434]/20 shrink-0">
-              <img src="/logo.png" alt="Sinergi Visi Logo" className="w-full h-full object-cover scale-[1.4] origin-[50%_40%]" />
+              <img src="/logo.svg" alt="Sinergi Visi Logo" className="w-full h-full object-cover p-1.5" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight">SinergiVisi</h1>
             <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Agent Dashboard — Masuk untuk Melanjutkan</p>

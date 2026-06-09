@@ -112,7 +112,7 @@ export default function Home() {
 
       <footer className="text-center">
         <p className="text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-darker)' }}>
-          Powered by Gemini AI • SinergiVisi Layanan Pelanggan
+          SinergiVisi Layanan Pelanggan • Developed by <a href="https://debipraharadika.web.id" target="_blank" rel="noopener noreferrer" className="hover:text-[#cda434] transition-colors">Debi Prahara Dika</a>
         </p>
       </footer>
     </div>

@@ -136,7 +136,7 @@ export default function AdminDashboard() {
       <aside className="w-64 border-r p-6 flex flex-col gap-8" style={{ borderColor: 'var(--card-border)', backgroundColor: 'var(--input-bg)' }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded overflow-hidden shadow-lg shadow-[#cda434]/20 bg-white border border-[#cda434]/20 shrink-0">
-            <img src="/logo.png" alt="Sinergi Visi Logo" className="w-full h-full object-cover scale-[1.4] origin-[50%_40%]" />
+            <img src="/logo.svg" alt="Sinergi Visi Logo" className="w-full h-full object-cover p-1" />
           </div>
           <h1 className="font-bold text-lg tracking-tight">SinergiVisi <span className="text-[#cda434]">Admin</span></h1>
         </div>

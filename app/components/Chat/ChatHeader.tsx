@@ -13,7 +13,7 @@ export default function ChatHeader({ chatStatus, onNewChat }: ChatHeaderProps) {
     <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg overflow-hidden shadow-lg shadow-[#cda434]/20 bg-white border border-[#cda434]/20 shrink-0">
-          <img src="/logo.png" alt="Sinergi Visi Logo" className="w-full h-full object-cover scale-[1.4] origin-[50%_40%]" />
+          <img src="/logo.svg" alt="Sinergi Visi Logo" className="w-full h-full object-cover p-1" />
         </div>
         <div>
           <h1 className="text-xl md:text-2xl font-bold premium-gradient-text leading-tight">Sinergi Visi <span className="text-white">CS</span></h1>
